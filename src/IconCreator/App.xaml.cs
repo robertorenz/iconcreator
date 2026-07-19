@@ -54,6 +54,17 @@ public partial class App : Application
             report.AppendLine($"bytes={bytes}");
             report.AppendLine($"frames={frames.Count}");
             report.AppendLine($"sizes={string.Join(",", sizes)}");
+
+            // SVG rasterisation check (if a sample is present).
+            string svg = Path.Combine(Path.GetTempPath(), "sample_check.svg");
+            if (File.Exists(svg))
+            {
+                var raster = ImageIO.RasterizeSvg(svg, 128);
+                var buf = new int[128 * 128];
+                raster.CopyPixels(buf, 128 * 4, 0);
+                int opaque = buf.Count(px => ((px >> 24) & 0xFF) > 10);
+                report.AppendLine($"svg={raster.PixelWidth}x{raster.PixelHeight} opaquePixels={opaque}");
+            }
         }
         catch (Exception ex)
         {

@@ -1,18 +1,25 @@
 using System.IO;
+using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using IconCreator.Model;
+using SharpVectors.Converters;
+using SharpVectors.Renderers.Wpf;
 
 namespace IconCreator.IO;
 
-/// <summary>Loading of external images (.png/.jpg/.bmp/.ico) and PNG export.</summary>
+/// <summary>Loading of external images (.png/.jpg/.bmp/.ico/.gif/.svg) and PNG export.</summary>
 public static class ImageIO
 {
     public const string OpenFilter =
-        "Images (*.png;*.jpg;*.jpeg;*.bmp;*.ico;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.ico;*.gif|All files (*.*)|*.*";
+        "Images (*.png;*.jpg;*.jpeg;*.bmp;*.ico;*.gif;*.svg)|*.png;*.jpg;*.jpeg;*.bmp;*.ico;*.gif;*.svg|All files (*.*)|*.*";
 
-    /// <summary>Load every frame from a file (an .ico can carry many).</summary>
+    /// <summary>Load every frame from a file (an .ico can carry many; an .svg is rasterised).</summary>
     public static IReadOnlyList<BitmapSource> LoadFrames(string path)
     {
+        if (path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+            return new[] { RasterizeSvg(path, 512) };
+
         using var fs = File.OpenRead(path);
         var decoder = BitmapDecoder.Create(fs,
             BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
@@ -25,6 +32,43 @@ public static class ImageIO
             if (bs != null) list.Add(bs);
         }
         return list;
+    }
+
+    /// <summary>Render an SVG to a square, high-resolution bitmap (aspect preserved, centred).</summary>
+    public static BitmapSource RasterizeSvg(string path, int size)
+    {
+        var settings = new WpfDrawingSettings
+        {
+            IncludeRuntime = false,
+            TextAsGeometry = true
+        };
+
+        using var reader = new FileSvgReader(settings);
+        Drawing drawing = reader.Read(path)
+            ?? throw new InvalidOperationException("The SVG could not be parsed.");
+
+        Rect bounds = drawing.Bounds;
+        if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
+            throw new InvalidOperationException("The SVG has no drawable content.");
+
+        double scale = Math.Min(size / bounds.Width, size / bounds.Height);
+        double w = bounds.Width * scale, h = bounds.Height * scale;
+        double ox = (size - w) / 2, oy = (size - h) / 2;
+
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.PushTransform(new TranslateTransform(ox, oy));
+            dc.PushTransform(new ScaleTransform(scale, scale));
+            dc.PushTransform(new TranslateTransform(-bounds.X, -bounds.Y));
+            dc.DrawDrawing(drawing);
+            dc.Pop(); dc.Pop(); dc.Pop();
+        }
+
+        var rtb = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
+        rtb.Render(visual);
+        rtb.Freeze();
+        return rtb;
     }
 
     /// <summary>Pick the frame whose dimensions best fit a target size.</summary>
