@@ -16,17 +16,29 @@ namespace IconCreator;
 
 public partial class MainWindow : Window
 {
-    private IconDocument _doc = null!;
-    private IconSlice _active = null!;
+    /// <summary>One open document (an editor tab) with its own undo history.</summary>
+    private sealed class DocSession
+    {
+        public required IconDocument Doc { get; init; }
+        public IconSlice Active { get; set; } = null!;
+        public readonly Stack<UndoCommand> Undo = new();
+        public readonly Stack<UndoCommand> Redo = new();
+    }
+
+    private readonly List<DocSession> _sessions = new();
+    private DocSession _cur = null!;
+
+    // Accessors over the active session, so the rest of the code is unchanged.
+    private IconDocument _doc => _cur?.Doc!;
+    private IconSlice _active { get => _cur?.Active!; set => _cur!.Active = value; }
+    private Stack<UndoCommand> _undo => _cur.Undo;
+    private Stack<UndoCommand> _redo => _cur.Redo;
 
     private ToolKind _tool = ToolKind.Pencil;
     private Color _color = Colors.Black;
     private int _brushSize = 1;
     private int _tolerance = 0;
     private double _zoom = 8;
-
-    private readonly Stack<UndoCommand> _undo = new();
-    private readonly Stack<UndoCommand> _redo = new();
 
     private bool _drawing;
     private int _startX, _startY, _lastX, _lastY;
@@ -57,23 +69,133 @@ public partial class MainWindow : Window
         Loaded += (_, _) => { NewDocument(IconDocument.StandardSizes, select: 32); FitZoom(); };
     }
 
-    // ============================ Document ============================
+    // ============================ Documents & tabs ============================
 
+    /// <summary>Create a new document in its own tab and switch to it.</summary>
     private void NewDocument(int[] sizes, int select = 32)
     {
-        _doc = new IconDocument(sizes);
-        _undo.Clear();
-        _redo.Clear();
-        BuildSizeList();
-        var target = _doc.Find(select) ?? _doc.Slices[^1];
-        SetActive(target);
-        _doc.IsDirty = false;
+        var doc = new IconDocument(sizes);
+        var active = doc.Find(select) ?? doc.Slices[^1];
+        var session = new DocSession { Doc = doc, Active = active };
+        _sessions.Add(session);
+        ActivateSession(session);
+        doc.IsDirty = false;
         UpdateTitle();
+        RefreshTabStrip();
         SetColor(_color);
+    }
+
+    private void ActivateSession(DocSession session)
+    {
+        _cur = session;
+        BuildSizeList();
+        SetActive(session.Active);
+        UpdateTitle();
+        RefreshTabStrip();
+    }
+
+    private void CloseSession(DocSession session)
+    {
+        if (session.Doc.IsDirty)
+        {
+            ActivateSession(session);   // show what is about to close
+            if (!ConfirmDiscard()) return;
+        }
+
+        int idx = _sessions.IndexOf(session);
+        _sessions.Remove(session);
+
+        if (_sessions.Count == 0)
+        {
+            NewDocument(IconDocument.StandardSizes, 32);   // always keep one open
+            FitZoom();
+            return;
+        }
+
+        if (_cur == session)
+            ActivateSession(_sessions[Math.Min(idx, _sessions.Count - 1)]);
+        else
+            RefreshTabStrip();
+    }
+
+    private void RefreshTabStrip()
+    {
+        if (TabStrip == null) return;
+        TabStrip.Children.Clear();
+        foreach (var s in _sessions)
+            TabStrip.Children.Add(BuildTab(s));
+
+        var add = new Button
+        {
+            Content = "+",
+            Style = (Style)Application.Current.Resources["Button.Flat"],
+            Foreground = (Brush)Application.Current.Resources["Brush.TextDim"],
+            FontSize = 16,
+            Padding = new Thickness(8, 2, 8, 2),
+            Margin = new Thickness(2, 0, 0, 4),
+            VerticalAlignment = VerticalAlignment.Center,
+            ToolTip = "New icon (Ctrl+N)"
+        };
+        add.Click += (_, _) => { NewDocument(IconDocument.StandardSizes, 32); FitZoom(); };
+        TabStrip.Children.Add(add);
+    }
+
+    private Border BuildTab(DocSession s)
+    {
+        bool active = s == _cur;
+        string name = s.Doc.FilePath is null ? "Untitled" : Path.GetFileName(s.Doc.FilePath);
+
+        var stack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+
+        if (s.Doc.IsDirty)
+            stack.Children.Add(new TextBlock
+            {
+                Text = "●", FontSize = 10,
+                Foreground = (Brush)Application.Current.Resources["Brush.Accent"],
+                Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center
+            });
+
+        stack.Children.Add(new TextBlock
+        {
+            Text = name, FontSize = 12.5,
+            Foreground = active ? (Brush)Application.Current.Resources["Brush.Text"]
+                                : (Brush)Application.Current.Resources["Brush.TextDim"],
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 160
+        });
+
+        var close = new Button
+        {
+            Content = "✕", Width = 18, Height = 18, Padding = new Thickness(0),
+            Margin = new Thickness(8, 0, 0, 0), FontSize = 9,
+            Style = (Style)Application.Current.Resources["Button.Flat"],
+            Foreground = (Brush)Application.Current.Resources["Brush.TextFaint"],
+            VerticalAlignment = VerticalAlignment.Center,
+            ToolTip = "Close (Ctrl+W)"
+        };
+        close.Click += (_, _) => CloseSession(s);
+        stack.Children.Add(close);
+
+        var tab = new Border
+        {
+            Padding = new Thickness(12, 7, 6, 7),
+            Margin = new Thickness(0, 0, 4, 4),
+            CornerRadius = new CornerRadius(6, 6, 0, 0),
+            Background = active ? (Brush)Application.Current.Resources["Brush.Window"]
+                                : (Brush)Application.Current.Resources["Brush.PanelAlt"],
+            BorderBrush = active ? (Brush)Application.Current.Resources["Brush.Border"] : Brushes.Transparent,
+            BorderThickness = new Thickness(1, 1, 1, 0),
+            Cursor = Cursors.Hand,
+            Child = stack
+        };
+        tab.MouseLeftButtonUp += (_, _) => { if (s != _cur) ActivateSession(s); };
+        tab.MouseDown += (_, e) => { if (e.ChangedButton == MouseButton.Middle) CloseSession(s); };
+        return tab;
     }
 
     private void SetActive(IconSlice slice)
     {
+        if (_importing) EndImport();   // placement is tied to one slice
         _active = slice;
         RenderActive();
         HighlightActiveRow();
@@ -89,6 +211,7 @@ public partial class MainWindow : Window
         CheckerBorder.Background = BuildCheckerBrush(_zoom);
         UpdateGridOverlay();
         _active.Buffer.Flush();
+        if (_importing) LayoutImportLayer();
     }
 
     // ============================ Tool palette ============================
@@ -185,6 +308,7 @@ public partial class MainWindow : Window
 
     private void OnCanvasMouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (_importing) return;   // drawing is disabled while placing an image
         if (!TryPixel(e, out int px, out int py)) return;
 
         if (_tool == ToolKind.Eyedropper)
@@ -487,7 +611,6 @@ public partial class MainWindow : Window
 
     private void OnNew(object sender, RoutedEventArgs e)
     {
-        if (!ConfirmDiscard()) return;
         var sizes = NewIconDialog.Show(this);
         if (sizes == null) return;
         NewDocument(sizes, sizes.Contains(32) ? 32 : sizes[0]);
@@ -496,7 +619,6 @@ public partial class MainWindow : Window
 
     private void OnOpen(object sender, RoutedEventArgs e)
     {
-        if (!ConfirmDiscard()) return;
         var dlg = new OpenFileDialog { Filter = "Icon (*.ico)|*.ico|" + ImageIO.OpenFilter };
         if (dlg.ShowDialog(this) != true) return;
         OpenPath(dlg.FileName);
@@ -645,7 +767,7 @@ public partial class MainWindow : Window
         btn.Click += (_, _) =>
         {
             _recentPopup!.IsOpen = false;
-            if (ConfirmDiscard()) OpenPath(captured);
+            OpenPath(captured);   // opens in a new tab
         };
         return btn;
     }
@@ -696,21 +818,209 @@ public partial class MainWindow : Window
             var frames = ImageIO.LoadFrames(dlg.FileName);
             if (frames.Count == 0) throw new InvalidOperationException("No image data found.");
 
-            foreach (var slice in _doc.Slices)
-            {
-                var before = slice.Buffer.Snapshot();
-                slice.Buffer.LoadFrom(ImageIO.BestFrameFor(frames, slice.Size));
-                _undo.Push(new UndoCommand(slice, before, slice.Buffer.Snapshot()));
-            }
-            _redo.Clear();
-            RenderActive();
-            MarkDirty();
-            StatusHint.Text = $"Imported {Path.GetFileName(dlg.FileName)} into all sizes";
+            // Use the highest-resolution frame available for the best scaling quality.
+            var img = frames.OrderByDescending(f => f.PixelWidth).First();
+            BeginImport(img, Path.GetFileName(dlg.FileName));
         }
         catch (Exception ex)
         {
             ModalDialog.Error(this, "Could not import image", ex.Message);
         }
+    }
+
+    // ============================ Import placement layer ============================
+
+    private bool _importing;
+    private BitmapSource? _importImage;
+    private double _impX, _impY, _impW, _impH;     // in active-slice pixel space
+    private Image? _impPreview;
+    private System.Windows.Shapes.Rectangle? _impBox;
+
+    private void BeginImport(BitmapSource img, string name)
+    {
+        if (_importing) EndImport();
+        _importImage = img;
+        _importing = true;
+
+        FitPlacement();  // sensible default: aspect-fit, centred
+
+        ImportLayer.Children.Clear();
+
+        _impPreview = new Image { Source = img, Stretch = Stretch.Fill, IsHitTestVisible = false };
+        RenderOptions.SetBitmapScalingMode(_impPreview, BitmapScalingMode.HighQuality);
+        ImportLayer.Children.Add(_impPreview);
+
+        _impBox = new System.Windows.Shapes.Rectangle
+        {
+            Stroke = (Brush)Application.Current.Resources["Brush.Accent"],
+            StrokeThickness = 1.4,
+            StrokeDashArray = new DoubleCollection { 4, 3 },
+            Fill = Brushes.Transparent,
+            IsHitTestVisible = false
+        };
+        ImportLayer.Children.Add(_impBox);
+
+        // Move handle covers the whole rectangle.
+        var move = new Thumb { Opacity = 0, Cursor = Cursors.SizeAll };
+        move.DragDelta += (_, ev) =>
+        {
+            _impX += ev.HorizontalChange / _zoom;
+            _impY += ev.VerticalChange / _zoom;
+            LayoutImportLayer();
+        };
+        ImportLayer.Children.Add(move);
+        _moveThumb = move;
+
+        // Four corner resize handles.
+        _corners = new Thumb[4];
+        var tags = new[] { "TL", "TR", "BL", "BR" };
+        var cursors = new[] { Cursors.SizeNWSE, Cursors.SizeNESW, Cursors.SizeNESW, Cursors.SizeNWSE };
+        for (int i = 0; i < 4; i++)
+        {
+            var t = new Thumb
+            {
+                Width = 12, Height = 12, Tag = tags[i], Cursor = cursors[i],
+                Background = (Brush)Application.Current.Resources["Brush.Accent"]
+            };
+            t.Template = MakeHandleTemplate();
+            t.DragDelta += OnCornerDrag;
+            ImportLayer.Children.Add(t);
+            _corners[i] = t;
+        }
+
+        ImportLayer.Visibility = Visibility.Visible;
+        ImportBar.Visibility = Visibility.Visible;
+        LayoutImportLayer();
+        StatusHint.Text = $"Placing {name} — drag to move, corners to resize, then Apply";
+    }
+
+    private Thumb? _moveThumb;
+    private Thumb[]? _corners;
+
+    private static ControlTemplate MakeHandleTemplate()
+    {
+        var factory = new FrameworkElementFactory(typeof(Border));
+        factory.SetValue(Border.BackgroundProperty, Application.Current.Resources["Brush.Accent"]);
+        factory.SetValue(Border.BorderBrushProperty, Brushes.White);
+        factory.SetValue(Border.BorderThicknessProperty, new Thickness(1.5));
+        factory.SetValue(Border.CornerRadiusProperty, new CornerRadius(2));
+        return new ControlTemplate(typeof(Thumb)) { VisualTree = factory };
+    }
+
+    private void OnCornerDrag(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        double dx = e.HorizontalChange / _zoom, dy = e.VerticalChange / _zoom;
+        switch (((Thumb)sender).Tag as string)
+        {
+            case "TL": _impX += dx; _impY += dy; _impW -= dx; _impH -= dy; break;
+            case "TR": _impY += dy; _impW += dx; _impH -= dy; break;
+            case "BL": _impX += dx; _impW -= dx; _impH += dy; break;
+            case "BR": _impW += dx; _impH += dy; break;
+        }
+        _impW = Math.Max(1, _impW);
+        _impH = Math.Max(1, _impH);
+        LayoutImportLayer();
+    }
+
+    private void LayoutImportLayer()
+    {
+        if (!_importing || _impPreview == null || _impBox == null || _corners == null || _moveThumb == null) return;
+
+        double ox = _impX * _zoom, oy = _impY * _zoom, ow = _impW * _zoom, oh = _impH * _zoom;
+
+        void Place(FrameworkElement el, double x, double y, double w, double h)
+        {
+            Canvas.SetLeft(el, x); Canvas.SetTop(el, y);
+            el.Width = Math.Max(0, w); el.Height = Math.Max(0, h);
+        }
+
+        Place(_impPreview, ox, oy, ow, oh);
+        Place(_impBox, ox, oy, ow, oh);
+        Place(_moveThumb, ox, oy, ow, oh);
+
+        var pts = new[] { (ox, oy), (ox + ow, oy), (ox, oy + oh), (ox + ow, oy + oh) };
+        for (int i = 0; i < 4; i++)
+        {
+            Canvas.SetLeft(_corners[i], pts[i].Item1 - 6);
+            Canvas.SetTop(_corners[i], pts[i].Item2 - 6);
+        }
+    }
+
+    private void FitPlacement()
+    {
+        double a = _active.Size, iw = _importImage!.PixelWidth, ih = _importImage.PixelHeight;
+        double scale = Math.Min(a / iw, a / ih);
+        _impW = iw * scale; _impH = ih * scale;
+        _impX = (a - _impW) / 2; _impY = (a - _impH) / 2;
+    }
+
+    private void OnImportFit(object sender, RoutedEventArgs e) { FitPlacement(); LayoutImportLayer(); }
+
+    private void OnImportCenter(object sender, RoutedEventArgs e)
+    {
+        double a = _active.Size;
+        _impX = (a - _impW) / 2; _impY = (a - _impH) / 2;
+        LayoutImportLayer();
+    }
+
+    private void OnImportReset(object sender, RoutedEventArgs e)
+    {
+        double a = _active.Size;
+        _impW = _importImage!.PixelWidth; _impH = _importImage.PixelHeight;
+        _impX = (a - _impW) / 2; _impY = (a - _impH) / 2;
+        LayoutImportLayer();
+    }
+
+    private void OnImportCancel(object sender, RoutedEventArgs e)
+    {
+        EndImport();
+        StatusHint.Text = "Import cancelled";
+    }
+
+    private void OnImportApply(object sender, RoutedEventArgs e)
+    {
+        if (_importImage == null) { EndImport(); return; }
+
+        var targets = ImportAllSizes.IsChecked == true
+            ? _doc.Slices.ToList()
+            : new List<IconSlice> { _active };
+
+        double a = _active.Size;
+        foreach (var slice in targets)
+        {
+            double sc = slice.Size / a;
+            var before = slice.Buffer.Snapshot();
+            var placed = ImageIO.RasterizePlacement(_importImage,
+                _impX * sc, _impY * sc, _impW * sc, _impH * sc, slice.Size);
+
+            for (int i = 0; i < placed.Length; i++)
+            {
+                int argb = placed[i];
+                if (((argb >> 24) & 0xFF) != 0)
+                    slice.Buffer.Blend(i % slice.Size, i / slice.Size, argb);
+            }
+            slice.Buffer.Flush();
+            _undo.Push(new UndoCommand(slice, before, slice.Buffer.Snapshot()));
+        }
+        _redo.Clear();
+
+        EndImport();
+        RenderActive();
+        MarkDirty();
+        StatusHint.Text = targets.Count > 1 ? "Image applied to all sizes" : "Image applied";
+    }
+
+    private void EndImport()
+    {
+        _importing = false;
+        _importImage = null;
+        _impPreview = null;
+        _impBox = null;
+        _moveThumb = null;
+        _corners = null;
+        ImportLayer.Children.Clear();
+        ImportLayer.Visibility = Visibility.Collapsed;
+        ImportBar.Visibility = Visibility.Collapsed;
     }
 
     private void OnExportPng(object sender, RoutedEventArgs e)
@@ -738,6 +1048,7 @@ public partial class MainWindow : Window
     {
         _doc.IsDirty = true;
         UpdateTitle();
+        RefreshTabStrip();
     }
 
     private void UpdateTitle() => Title = _doc.Title;
@@ -746,13 +1057,21 @@ public partial class MainWindow : Window
     {
         if (!_doc.IsDirty) return true;
         return ModalDialog.Confirm(this, "Discard changes?",
-            "The current icon has unsaved changes. Continue and lose them?",
+            "This icon has unsaved changes. Continue and lose them?",
             "Discard", "Cancel");
     }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
-        if (!ConfirmDiscard()) e.Cancel = true;
+        int dirty = _sessions.Count(s => s.Doc.IsDirty);
+        if (dirty > 0)
+        {
+            string msg = dirty == 1
+                ? "One open icon has unsaved changes. Close anyway?"
+                : $"{dirty} open icons have unsaved changes. Close anyway?";
+            if (!ModalDialog.Confirm(this, "Discard changes?", msg, "Close", "Cancel"))
+                e.Cancel = true;
+        }
         base.OnClosing(e);
     }
 
@@ -770,6 +1089,17 @@ public partial class MainWindow : Window
                 case Key.S: OnSave(this, null!); e.Handled = true; return;
                 case Key.N: OnNew(this, null!); e.Handled = true; return;
                 case Key.O: OnOpen(this, null!); e.Handled = true; return;
+                case Key.W: if (_cur != null) CloseSession(_cur); e.Handled = true; return;
+                case Key.Tab:
+                    if (_sessions.Count > 1)
+                    {
+                        int i = _sessions.IndexOf(_cur);
+                        int next = shift ? (i - 1 + _sessions.Count) % _sessions.Count
+                                         : (i + 1) % _sessions.Count;
+                        ActivateSession(_sessions[next]);
+                    }
+                    e.Handled = true;
+                    return;
             }
         }
         else

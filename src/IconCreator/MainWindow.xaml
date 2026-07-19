@@ -60,24 +60,65 @@
 
             <!-- Editor canvas -->
             <Grid Grid.Column="1" Background="{StaticResource Brush.Window}">
-                <ScrollViewer x:Name="CanvasScroll" HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto" Padding="24"
-                              PreviewMouseWheel="OnCanvasWheel">
-                    <Grid x:Name="CanvasHost" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Border x:Name="CheckerBorder" SnapsToDevicePixels="True">
-                            <Grid>
-                                <Image x:Name="EditImage" Stretch="Fill"
-                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                       RenderOptions.EdgeMode="Aliased"
-                                       MouseLeftButtonDown="OnCanvasMouseDown"
-                                       MouseMove="OnCanvasMouseMove"
-                                       MouseLeftButtonUp="OnCanvasMouseUp"
-                                       MouseLeave="OnCanvasMouseLeave"/>
-                                <Rectangle x:Name="GridOverlay" IsHitTestVisible="False"/>
-                            </Grid>
-                        </Border>
-                    </Grid>
-                </ScrollViewer>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Document tab strip -->
+                <Border Grid.Row="0" Background="{StaticResource Brush.Panel}"
+                        BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,0,1">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="TabStrip" Orientation="Horizontal" Margin="6,6,6,0"/>
+                    </ScrollViewer>
+                </Border>
+
+                <Grid Grid.Row="1">
+                    <ScrollViewer x:Name="CanvasScroll" HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto" Padding="24"
+                                  PreviewMouseWheel="OnCanvasWheel">
+                        <Grid x:Name="CanvasHost" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border x:Name="CheckerBorder" SnapsToDevicePixels="True">
+                                <Grid>
+                                    <Image x:Name="EditImage" Stretch="Fill"
+                                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                           RenderOptions.EdgeMode="Aliased"
+                                           MouseLeftButtonDown="OnCanvasMouseDown"
+                                           MouseMove="OnCanvasMouseMove"
+                                           MouseLeftButtonUp="OnCanvasMouseUp"
+                                           MouseLeave="OnCanvasMouseLeave"/>
+                                    <Rectangle x:Name="GridOverlay" IsHitTestVisible="False"/>
+                                    <Canvas x:Name="ImportLayer" Visibility="Collapsed" Background="Transparent"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </ScrollViewer>
+
+                    <!-- Floating import-transform action bar -->
+                    <Border x:Name="ImportBar" Visibility="Collapsed"
+                            VerticalAlignment="Top" HorizontalAlignment="Center"
+                            Margin="0,14,0,0" Padding="10,8"
+                            Background="{StaticResource Brush.Elevated}"
+                            BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1"
+                            CornerRadius="8">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.5" Direction="270"/>
+                        </Border.Effect>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Placing image" VerticalAlignment="Center"
+                                       Foreground="{StaticResource Brush.TextDim}" Margin="4,0,12,0"/>
+                            <Button Content="Fit" Padding="10,4" Click="OnImportFit"/>
+                            <Button Content="Center" Padding="10,4" Margin="6,0,0,0" Click="OnImportCenter"/>
+                            <Button Content="Reset" Padding="10,4" Margin="6,0,0,0" Click="OnImportReset"/>
+                            <CheckBox x:Name="ImportAllSizes" Content="All sizes"
+                                      VerticalAlignment="Center" Margin="12,0,12,0"
+                                      ToolTip="Apply the placed image to every resolution, not just this one"/>
+                            <Button Content="Cancel" Padding="12,4" Click="OnImportCancel"/>
+                            <Button Content="Apply" Padding="14,4" Margin="6,0,0,0"
+                                    Style="{StaticResource Button.Accent}" Click="OnImportApply"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </Grid>
 
             <!-- Right panels -->

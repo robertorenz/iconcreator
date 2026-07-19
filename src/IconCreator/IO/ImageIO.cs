@@ -42,6 +42,26 @@ public static class ImageIO
         return frames.OrderByDescending(f => f.PixelWidth).First();
     }
 
+    /// <summary>
+    /// Render <paramref name="img"/> at rectangle (x,y,w,h) — expressed in the target
+    /// icon's pixel space — onto a transparent <paramref name="size"/>² canvas and return
+    /// it as straight-alpha ARGB pixels ready to composite into a slice.
+    /// </summary>
+    public static int[] RasterizePlacement(BitmapSource img, double x, double y, double w, double h, int size)
+    {
+        var visual = new System.Windows.Media.DrawingVisual();
+        using (var dc = visual.RenderOpen())
+            dc.DrawImage(img, new System.Windows.Rect(x, y, w, h));
+
+        var rtb = new RenderTargetBitmap(size, size, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+        rtb.Render(visual);
+
+        var straight = new FormatConvertedBitmap(rtb, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+        var buf = new int[size * size];
+        straight.CopyPixels(buf, size * 4, 0);
+        return buf;
+    }
+
     public static void ExportPng(string path, PixelBuffer buffer)
     {
         var encoder = new PngBitmapEncoder();
