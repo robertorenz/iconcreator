@@ -1,0 +1,77 @@
+# IconCreator Studio
+
+A professional multi-resolution icon editor for Windows — a modern, cleaner alternative to Axialis IconWorkshop. Built with **C# / .NET 9 / WPF**.
+
+![IconCreator Studio](docs/screenshot.png)
+
+## Why it's better
+
+| | IconCreator Studio | Axialis IconWorkshop |
+|---|---|---|
+| Price | Free & open | Paid licence |
+| UI | Modern dark, DPI-aware | Dated |
+| Multi-resolution `.ico` | ✅ 16 → 256 px in one file | ✅ |
+| Live per-size thumbnails | ✅ update as you draw | Partial |
+| Import any image → all sizes | ✅ one click | ✅ |
+| True 32-bit alpha, PNG-compressed 256 px | ✅ | ✅ |
+| Cross-tooling | 100% managed, no native deps | Native |
+
+## Features
+
+- **Multi-resolution documents** — edit 16, 24, 32, 48, 64, 128 and 256 px slices side by side; tick which ones ship in the exported `.ico`.
+- **Full drawing toolset** — pencil, eraser, flood fill (with tolerance), colour picker, line, rectangle / filled rectangle, ellipse / filled ellipse, adjustable brush size.
+- **Real alpha** — every pixel is straight-alpha BGRA; optional alpha-blend mode composites brush strokes over existing pixels.
+- **Colour picker** — RGBA sliders, hex entry, preset swatches, and a transparency-aware preview.
+- **Import** — drop in any PNG/JPG/BMP/GIF/ICO and auto-resample it into every resolution.
+- **Export** — write a proper multi-image Windows `.ico` (256 px stored PNG-compressed, smaller sizes as 32-bit DIB with an AND mask) or a single `.png`.
+- **Editor niceties** — zoom 1×–32×, fit-to-window, pixel grid overlay, transparency checkerboard, unlimited undo/redo, live status bar.
+- **Modal dialogs** everywhere (no jarring system alerts) and a native dark title bar.
+
+## Keyboard shortcuts
+
+| Key | Action | Key | Action |
+|-----|--------|-----|--------|
+| `B` | Pencil | `L` | Line |
+| `E` | Eraser | `R` / `Shift+R` | Rectangle / filled |
+| `G` | Flood fill | `O` / `Shift+O` | Ellipse / filled |
+| `I` | Colour picker | `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
+| `Ctrl+N` | New | `Ctrl+O` | Open |
+| `Ctrl+S` | Save | | |
+
+## Build & run
+
+Requires the **.NET 9 SDK**.
+
+```bash
+dotnet build -c Release
+dotnet run --project src/IconCreator
+```
+
+The compiled app is a single WPF desktop executable (`IconCreator.exe`).
+
+## Project layout
+
+```
+src/IconCreator/
+├─ Model/        PixelBuffer, IconSlice, IconDocument
+├─ Editing/      Drawing primitives (line, rect, ellipse, flood fill)
+├─ IO/           IcoEncoder (multi-res .ico), ImageIO (load / PNG export)
+├─ Views/        Modal dialogs, colour picker, new-icon dialog, dark chrome
+├─ Theme/        Professional dark palette + control styles
+└─ MainWindow    Editor shell, tools, undo/redo, file commands
+```
+
+## Verification
+
+The encoder is covered by a built-in round-trip self-test:
+
+```bash
+IconCreator.exe --selftest   # writes %TEMP%\iconcreator_selftest.txt
+```
+
+It builds a synthetic 16/32/48/256 icon, saves it, reloads it through the WPF
+decoder and confirms all four frames come back at the right sizes.
+
+---
+
+© Reddin Assessments — built with .NET 9 / WPF.

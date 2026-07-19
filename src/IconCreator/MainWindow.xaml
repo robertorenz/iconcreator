@@ -1,0 +1,188 @@
+<Window x:Class="IconCreator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="IconCreator Studio"
+        Height="760" Width="1180"
+        MinHeight="560" MinWidth="920"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource Brush.Window}"
+        UseLayoutRounding="True">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ============ Top command bar ============ -->
+        <Border Grid.Row="0" Background="{StaticResource Brush.Panel}"
+                BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,0,1">
+            <Grid>
+                <StackPanel Orientation="Horizontal" Margin="10,7">
+                    <TextBlock Text="◆" FontSize="16" Foreground="{StaticResource Brush.Accent}"
+                               VerticalAlignment="Center" Margin="4,0,6,0"/>
+                    <TextBlock Text="IconCreator Studio" FontWeight="SemiBold" FontSize="14"
+                               VerticalAlignment="Center" Margin="0,0,16,0"/>
+
+                    <Button x:Name="BtnNew" Style="{StaticResource Button.Flat}" Content="New" Click="OnNew"/>
+                    <Button x:Name="BtnOpen" Style="{StaticResource Button.Flat}" Content="Open" Click="OnOpen"/>
+                    <Button x:Name="BtnSave" Style="{StaticResource Button.Flat}" Content="Save" Click="OnSave"/>
+                    <Button x:Name="BtnSaveAs" Style="{StaticResource Button.Flat}" Content="Save As" Click="OnSaveAs"/>
+                    <Rectangle Width="1" Margin="8,4" Fill="{StaticResource Brush.Border}"/>
+                    <Button x:Name="BtnImport" Style="{StaticResource Button.Flat}" Content="Import Image" Click="OnImport"/>
+                    <Button x:Name="BtnExportPng" Style="{StaticResource Button.Flat}" Content="Export PNG" Click="OnExportPng"/>
+                    <Rectangle Width="1" Margin="8,4" Fill="{StaticResource Brush.Border}"/>
+                    <Button x:Name="BtnUndo" Style="{StaticResource Button.Flat}" Content="Undo" Click="OnUndo"/>
+                    <Button x:Name="BtnRedo" Style="{StaticResource Button.Flat}" Content="Redo" Click="OnRedo"/>
+                    <Button x:Name="BtnClear" Style="{StaticResource Button.Flat}" Content="Clear" Click="OnClear"/>
+                </StackPanel>
+
+                <Button Content="Export .ICO" HorizontalAlignment="Right" Margin="0,7,12,7"
+                        Style="{StaticResource Button.Accent}" Click="OnExportIco"/>
+            </Grid>
+        </Border>
+
+        <!-- ============ Work area ============ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="310"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Tool palette -->
+            <Border Grid.Column="0" Background="{StaticResource Brush.Panel}"
+                    BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,1,0">
+                <StackPanel x:Name="ToolStack" Margin="7,10" Width="46"/>
+            </Border>
+
+            <!-- Editor canvas -->
+            <Grid Grid.Column="1" Background="{StaticResource Brush.Window}">
+                <ScrollViewer x:Name="CanvasScroll" HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto" Padding="24">
+                    <Grid x:Name="CanvasHost" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border x:Name="CheckerBorder" SnapsToDevicePixels="True">
+                            <Grid>
+                                <Image x:Name="EditImage" Stretch="Fill"
+                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                       RenderOptions.EdgeMode="Aliased"
+                                       MouseLeftButtonDown="OnCanvasMouseDown"
+                                       MouseMove="OnCanvasMouseMove"
+                                       MouseLeftButtonUp="OnCanvasMouseUp"
+                                       MouseLeave="OnCanvasMouseLeave"/>
+                                <Rectangle x:Name="GridOverlay" IsHitTestVisible="False"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Right panels -->
+            <Border Grid.Column="2" Background="{StaticResource Brush.Panel}"
+                    BorderBrush="{StaticResource Brush.Border}" BorderThickness="1,0,0,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,14">
+                    <StackPanel>
+
+                        <!-- Colour -->
+                        <TextBlock Text="COLOUR" Style="{StaticResource Label.Section}"/>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border x:Name="ColorSwatch" Width="52" Height="52" CornerRadius="6"
+                                    BorderBrush="{StaticResource Brush.Border}" BorderThickness="1"
+                                    Cursor="Hand" MouseLeftButtonUp="OnPickColor"/>
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="HexLabel" Text="#FF000000" FontFamily="Consolas" FontSize="13"/>
+                                <Button Content="Choose colour…" Margin="0,8,0,0" HorizontalAlignment="Left"
+                                        Padding="10,4" Click="OnPickColor"/>
+                            </StackPanel>
+                        </Grid>
+                        <WrapPanel x:Name="PaletteStrip" Margin="0,4,0,10"/>
+
+                        <Rectangle Height="1" Fill="{StaticResource Brush.Border}" Margin="0,4,0,12"/>
+
+                        <!-- Brush -->
+                        <TextBlock Text="BRUSH SIZE" Style="{StaticResource Label.Section}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="BrushSlider" Minimum="1" Maximum="16" Value="1"
+                                    IsSnapToTickEnabled="True" TickFrequency="1"
+                                    ValueChanged="OnBrushSizeChanged"/>
+                            <TextBlock x:Name="BrushValue" Grid.Column="1" Text="1 px" Width="42"
+                                       TextAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <TextBlock Text="FILL TOLERANCE" Style="{StaticResource Label.Section}" Margin="2,12,0,6"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ToleranceSlider" Minimum="0" Maximum="128" Value="0"
+                                    IsSnapToTickEnabled="True" TickFrequency="1"
+                                    ValueChanged="OnToleranceChanged"/>
+                            <TextBlock x:Name="ToleranceValue" Grid.Column="1" Text="0" Width="42"
+                                       TextAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <CheckBox x:Name="AlphaBlendCheck" Content="Alpha blend (respect opacity)"
+                                  IsChecked="True" Margin="0,12,0,0"/>
+                        <CheckBox x:Name="GridCheck" Content="Show pixel grid"
+                                  IsChecked="True" Margin="0,4,0,0" Checked="OnGridToggle" Unchecked="OnGridToggle"/>
+
+                        <Rectangle Height="1" Fill="{StaticResource Brush.Border}" Margin="0,14,0,12"/>
+
+                        <!-- Zoom -->
+                        <TextBlock Text="ZOOM" Style="{StaticResource Label.Section}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ZoomSlider" Minimum="1" Maximum="32" Value="8"
+                                    ValueChanged="OnZoomChanged"/>
+                            <TextBlock x:Name="ZoomValue" Grid.Column="1" Text="8×" Width="42"
+                                       TextAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+                        <Button Content="Fit to window" Margin="0,8,0,0" HorizontalAlignment="Left"
+                                Padding="10,4" Click="OnFitZoom"/>
+
+                        <Rectangle Height="1" Fill="{StaticResource Brush.Border}" Margin="0,14,0,12"/>
+
+                        <!-- Sizes -->
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="RESOLUTIONS" Style="{StaticResource Label.Section}"/>
+                            <TextBlock Text="✓ = export" HorizontalAlignment="Right" FontSize="10"
+                                       Foreground="{StaticResource Brush.TextFaint}"/>
+                        </Grid>
+                        <StackPanel x:Name="SizeList"/>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- ============ Status bar ============ -->
+        <Border Grid.Row="2" Background="{StaticResource Brush.Panel}"
+                BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,1,0,0">
+            <Grid Margin="12,5">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="StatusTool" Text="Pencil" Foreground="{StaticResource Brush.TextDim}"/>
+                    <TextBlock Text="  •  " Foreground="{StaticResource Brush.TextFaint}"/>
+                    <TextBlock x:Name="StatusSize" Text="32 × 32" Foreground="{StaticResource Brush.TextDim}"/>
+                    <TextBlock Text="  •  " Foreground="{StaticResource Brush.TextFaint}"/>
+                    <TextBlock x:Name="StatusCursor" Text="—" Foreground="{StaticResource Brush.TextDim}"/>
+                </StackPanel>
+                <TextBlock x:Name="StatusHint" HorizontalAlignment="Right"
+                           Foreground="{StaticResource Brush.TextFaint}"
+                           Text="Ready"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
