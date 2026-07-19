@@ -24,7 +24,7 @@ public static class IcoEncoder
                              .OrderBy(s => s.Size)
                              .ToList();
         if (included.Count == 0)
-            throw new InvalidOperationException("No sizes selected for export.");
+            throw new InvalidOperationException(Localization.Loc.T("err.noSizesExport"));
 
         var images = included.Select(EncodeSlice).ToList();
 

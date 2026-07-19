@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using IconCreator.Localization;
 using IconCreator.Model;
 
 namespace IconCreator.Views;
@@ -16,7 +17,7 @@ public sealed class NewIconDialog : Window
     public NewIconDialog(Window? owner)
     {
         Owner = owner;
-        Title = "New Icon";
+        Title = Loc.T("newIcon.title");
         Width = 320;
         SizeToContent = SizeToContent.Height;
         ResizeMode = ResizeMode.NoResize;
@@ -28,7 +29,7 @@ public sealed class NewIconDialog : Window
         var panel = new StackPanel { Margin = new Thickness(20) };
         panel.Children.Add(new TextBlock
         {
-            Text = "Include resolutions",
+            Text = Loc.T("newIcon.include"),
             Style = (Style)Application.Current.Resources["Label.Section"]
         });
 
@@ -45,15 +46,15 @@ public sealed class NewIconDialog : Window
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 16, 0, 0)
         };
-        var cancel = new Button { Content = "Cancel", MinWidth = 84, Margin = new Thickness(0, 0, 10, 0), IsCancel = true };
+        var cancel = new Button { Content = Loc.T("cancel"), MinWidth = 84, Margin = new Thickness(0, 0, 10, 0), IsCancel = true };
         cancel.Click += (_, _) => Close();
-        var ok = new Button { Content = "Create", MinWidth = 84, IsDefault = true, Style = (Style)Application.Current.Resources["Button.Accent"] };
+        var ok = new Button { Content = Loc.T("create"), MinWidth = 84, IsDefault = true, Style = (Style)Application.Current.Resources["Button.Accent"] };
         ok.Click += (_, _) =>
         {
             var sizes = _boxes.Where(kv => kv.Value.IsChecked == true).Select(kv => kv.Key).ToArray();
             if (sizes.Length == 0)
             {
-                ModalDialog.Error(this, "No sizes selected", "Choose at least one resolution.");
+                ModalDialog.Error(this, Loc.T("newIcon.noSizesTitle"), Loc.T("newIcon.noSizesMsg"));
                 return;
             }
             SelectedSizes = sizes;

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using IconCreator.Localization;
 
 namespace IconCreator.Model;
 
@@ -43,7 +44,7 @@ public sealed class IconDocument : INotifyPropertyChanged
     {
         get
         {
-            string name = FilePath is null ? "Untitled" : System.IO.Path.GetFileName(FilePath);
+            string name = FilePath is null ? Loc.T("untitled") : System.IO.Path.GetFileName(FilePath);
             return (_isDirty ? "● " : "") + name + "  —  IconCreator Studio";
         }
     }

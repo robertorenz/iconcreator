@@ -67,7 +67,7 @@ public partial class App : Application
     {
         Views.ModalDialog.Error(
             MainWindow,
-            "Unexpected error",
+            Localization.Loc.T("err.unexpectedTitle"),
             e.Exception.Message);
         e.Handled = true;
     }

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using IconCreator.Localization;
 
 namespace IconCreator.Views;
 
@@ -19,7 +20,7 @@ public sealed class ColorPickerDialog : Window
     public ColorPickerDialog(Window? owner, Color initial)
     {
         Owner = owner;
-        Title = "Select Colour";
+        Title = Loc.T("color.title");
         Width = 340;
         SizeToContent = SizeToContent.Height;
         ResizeMode = ResizeMode.NoResize;
@@ -52,7 +53,7 @@ public sealed class ColorPickerDialog : Window
         var hexRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
         hexRow.Children.Add(new TextBlock
         {
-            Text = "Hex",
+            Text = Loc.T("color.hex"),
             Width = 24,
             VerticalAlignment = VerticalAlignment.Center,
             Foreground = (Brush)Application.Current.Resources["Brush.TextDim"]
@@ -88,9 +89,9 @@ public sealed class ColorPickerDialog : Window
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 12, 0, 0)
         };
-        var cancel = new Button { Content = "Cancel", MinWidth = 84, Margin = new Thickness(0, 0, 10, 0), IsCancel = true };
+        var cancel = new Button { Content = Loc.T("cancel"), MinWidth = 84, Margin = new Thickness(0, 0, 10, 0), IsCancel = true };
         cancel.Click += (_, _) => Close();
-        var ok = new Button { Content = "Select", MinWidth = 84, IsDefault = true, Style = (Style)Application.Current.Resources["Button.Accent"] };
+        var ok = new Button { Content = Loc.T("select"), MinWidth = 84, IsDefault = true, Style = (Style)Application.Current.Resources["Button.Accent"] };
         ok.Click += (_, _) => { _ok = true; Close(); };
         buttons.Children.Add(cancel);
         buttons.Children.Add(ok);

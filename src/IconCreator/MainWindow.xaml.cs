@@ -8,6 +8,7 @@ using System.Windows.Media.Imaging;
 using IconCreator.Editing;
 using Drawing = IconCreator.Editing.Drawing;
 using IconCreator.IO;
+using IconCreator.Localization;
 using IconCreator.Model;
 using IconCreator.Views;
 using Microsoft.Win32;
@@ -47,23 +48,29 @@ public partial class MainWindow : Window
     private readonly Dictionary<int, Border> _sizeRows = new();
     private readonly List<ToggleButton> _toolButtons = new();
 
-    private static readonly (ToolKind kind, string glyph, string name, string hint)[] Tools =
+    private static readonly (ToolKind kind, string glyph, string key, string hint)[] Tools =
     {
-        (ToolKind.Pencil,          "✏",  "Pencil",           "B"),
-        (ToolKind.Eraser,          "▭",  "Eraser",           "E"),
-        (ToolKind.Fill,            "🪣",  "Flood Fill",       "G"),
-        (ToolKind.Eyedropper,      "💧",  "Colour Picker",    "I"),
-        (ToolKind.Line,            "╱",  "Line",             "L"),
-        (ToolKind.Rectangle,       "▢",  "Rectangle",        "R"),
-        (ToolKind.RectangleFilled, "▣",  "Filled Rectangle", "Shift+R"),
-        (ToolKind.Ellipse,         "◯",  "Ellipse",          "O"),
-        (ToolKind.EllipseFilled,   "●",  "Filled Ellipse",   "Shift+O"),
+        (ToolKind.Pencil,          "✏",  "tool.pencil",       "B"),
+        (ToolKind.Eraser,          "▭",  "tool.eraser",       "E"),
+        (ToolKind.Fill,            "🪣",  "tool.fill",         "G"),
+        (ToolKind.Eyedropper,      "💧",  "tool.eyedropper",   "I"),
+        (ToolKind.Line,            "╱",  "tool.line",         "L"),
+        (ToolKind.Rectangle,       "▢",  "tool.rect",         "R"),
+        (ToolKind.RectangleFilled, "▣",  "tool.rectFilled",   "Shift+R"),
+        (ToolKind.Ellipse,         "◯",  "tool.ellipse",      "O"),
+        (ToolKind.EllipseFilled,   "●",  "tool.ellipseFilled","Shift+O"),
     };
+
+    private readonly AppSettings _settings = AppSettings.Load();
 
     public MainWindow()
     {
         InitializeComponent();
         NativeChrome.ApplyDarkTitleBar(this);
+
+        Loc.Language = _settings.Language;
+        Loc.Changed += ApplyLanguage;
+
         BuildToolPalette();
         BuildPalette();
 
@@ -71,7 +78,127 @@ public partial class MainWindow : Window
         PreviewDragOver += OnFileDragOver;
         PreviewDrop += OnFileDrop;
 
-        Loaded += (_, _) => { NewDocument(IconDocument.StandardSizes, select: 32); FitZoom(); };
+        Loaded += (_, _) => { NewDocument(IconDocument.StandardSizes, select: 32); FitZoom(); ApplyLanguage(); };
+    }
+
+    // ============================ Localisation ============================
+
+    private Popup? _langPopup;
+
+    private void OnLanguageMenu(object sender, RoutedEventArgs e)
+    {
+        if (_langPopup != null) { _langPopup.IsOpen = false; _langPopup = null; }
+
+        var panel = new StackPanel { MinWidth = 150 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = Loc.T("language"),
+            Style = (Style)Application.Current.Resources["Label.Section"],
+            Margin = new Thickness(8, 6, 8, 6)
+        });
+
+        foreach (var lang in Loc.All)
+        {
+            bool current = lang == Loc.Language;
+            var btn = new Button
+            {
+                Content = (current ? "✓  " : "     ") + Loc.DisplayName(lang),
+                Style = (Style)Application.Current.Resources["Button.Flat"],
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Foreground = current ? (Brush)Application.Current.Resources["Brush.Accent"]
+                                     : (Brush)Application.Current.Resources["Brush.Text"]
+            };
+            var captured = lang;
+            btn.Click += (_, _) =>
+            {
+                _langPopup!.IsOpen = false;
+                Loc.Language = captured;          // raises Loc.Changed -> ApplyLanguage
+                _settings.Language = captured;
+                _settings.Save();
+            };
+            panel.Children.Add(btn);
+        }
+
+        var border = new Border
+        {
+            Background = (Brush)Application.Current.Resources["Brush.Elevated"],
+            BorderBrush = (Brush)Application.Current.Resources["Brush.BorderStrong"],
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(4),
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                BlurRadius = 16, ShadowDepth = 3, Opacity = 0.5, Direction = 270, Color = Colors.Black
+            },
+            Child = panel
+        };
+
+        _langPopup = new Popup
+        {
+            PlacementTarget = BtnLang,
+            Placement = PlacementMode.Bottom,
+            StaysOpen = false,
+            AllowsTransparency = true,
+            PopupAnimation = PopupAnimation.Fade,
+            Child = border,
+            IsOpen = true
+        };
+    }
+
+    /// <summary>Re-apply every visible string for the current language.</summary>
+    private void ApplyLanguage()
+    {
+        // Toolbar
+        BtnNew.Content = Loc.T("new");
+        BtnOpen.Content = Loc.T("open");
+        BtnRecent.Content = Loc.T("recent");
+        BtnSave.Content = Loc.T("save");
+        BtnSaveAs.Content = Loc.T("saveAs");
+        BtnImport.Content = Loc.T("import");
+        BtnExportPng.Content = Loc.T("exportPng");
+        BtnUndo.Content = Loc.T("undo");
+        BtnRedo.Content = Loc.T("redo");
+        BtnClear.Content = Loc.T("clear");
+        BtnExportIco.Content = Loc.T("exportIco");
+        BtnLang.ToolTip = Loc.T("language");
+
+        // Right panel
+        LblColour.Text = Loc.T("colour");
+        BtnChooseColour.Content = Loc.T("chooseColour");
+        LblBrush.Text = Loc.T("brushSize");
+        LblTolerance.Text = Loc.T("fillTolerance");
+        AlphaBlendCheck.Content = Loc.T("alphaBlend");
+        GridCheck.Content = Loc.T("showGrid");
+        LblZoom.Text = Loc.T("zoom");
+        BtnFitZoom.Content = Loc.T("fitWindow");
+        LblResolutions.Text = Loc.T("resolutions");
+        LblExportTick.Text = Loc.T("exportTick");
+
+        // Import bar
+        ImportPlacingLabel.Text = Loc.T("placingImage");
+        BtnImpFit.Content = Loc.T("fit");
+        BtnImpCenter.Content = Loc.T("center");
+        BtnImpReset.Content = Loc.T("reset");
+        ImportAllSizes.Content = Loc.T("allSizes");
+        ImportAllSizes.ToolTip = Loc.T("allSizesTip");
+        BtnImpCancel.Content = Loc.T("cancel");
+        BtnImpApply.Content = Loc.T("apply");
+
+        // Tool tooltips + current tool status
+        foreach (var b in _toolButtons)
+        {
+            var kind = (ToolKind)b.Tag!;
+            var t = Tools.First(x => x.kind == kind);
+            b.ToolTip = $"{Loc.T(t.key)}  ({t.hint})";
+        }
+        if (_cur != null)
+        {
+            StatusTool.Text = Loc.T(Tools.First(x => x.kind == _tool).key);
+            RefreshTabStrip();
+            UpdateTitle();
+        }
+        if (StatusHint != null && !_importing) StatusHint.Text = Loc.T("ready");
     }
 
     // ============================ Documents & tabs ============================
@@ -139,7 +266,7 @@ public partial class MainWindow : Window
             Padding = new Thickness(8, 2, 8, 2),
             Margin = new Thickness(2, 0, 0, 4),
             VerticalAlignment = VerticalAlignment.Center,
-            ToolTip = "New icon (Ctrl+N)"
+            ToolTip = $"{Loc.T("new")} (Ctrl+N)"
         };
         add.Click += (_, _) => { NewDocument(IconDocument.StandardSizes, 32); FitZoom(); };
         TabStrip.Children.Add(add);
@@ -148,7 +275,7 @@ public partial class MainWindow : Window
     private Border BuildTab(DocSession s)
     {
         bool active = s == _cur;
-        string name = s.Doc.FilePath is null ? "Untitled" : Path.GetFileName(s.Doc.FilePath);
+        string name = s.Doc.FilePath is null ? Loc.T("untitled") : Path.GetFileName(s.Doc.FilePath);
 
         var stack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
 
@@ -176,7 +303,7 @@ public partial class MainWindow : Window
             Style = (Style)Application.Current.Resources["Button.Flat"],
             Foreground = (Brush)Application.Current.Resources["Brush.TextFaint"],
             VerticalAlignment = VerticalAlignment.Center,
-            ToolTip = "Close (Ctrl+W)"
+            ToolTip = $"{Loc.T("close")} (Ctrl+W)"
         };
         close.Click += (_, _) => CloseSession(s);
         stack.Children.Add(close);
@@ -223,14 +350,14 @@ public partial class MainWindow : Window
 
     private void BuildToolPalette()
     {
-        foreach (var (kind, glyph, name, hint) in Tools)
+        foreach (var (kind, glyph, key, hint) in Tools)
         {
             var btn = new ToggleButton
             {
                 Style = (Style)Resources["Button.Tool"] ?? (Style)Application.Current.Resources["Button.Tool"],
                 Content = glyph,
                 Margin = new Thickness(0, 0, 0, 6),
-                ToolTip = $"{name}  ({hint})",
+                ToolTip = $"{Loc.T(key)}  ({hint})",
                 Tag = kind,
                 IsChecked = kind == _tool
             };
@@ -246,14 +373,14 @@ public partial class MainWindow : Window
         _tool = kind;
         foreach (var b in _toolButtons)
             b.IsChecked = (ToolKind)b.Tag! == kind;
-        StatusTool.Text = Tools.First(t => t.kind == kind).name;
+        StatusTool.Text = Loc.T(Tools.First(t => t.kind == kind).key);
         StatusHint.Text = kind switch
         {
-            ToolKind.Eyedropper => "Click a pixel to sample its colour",
-            ToolKind.Fill => "Click to flood-fill a region",
+            ToolKind.Eyedropper => Loc.T("hint.eyedropper"),
+            ToolKind.Fill => Loc.T("hint.fill"),
             ToolKind.Line or ToolKind.Rectangle or ToolKind.RectangleFilled
-                or ToolKind.Ellipse or ToolKind.EllipseFilled => "Drag to draw the shape",
-            _ => "Ready"
+                or ToolKind.Ellipse or ToolKind.EllipseFilled => Loc.T("hint.shape"),
+            _ => Loc.T("ready")
         };
     }
 
@@ -278,7 +405,7 @@ public partial class MainWindow : Window
                 BorderThickness = new Thickness(1),
                 Cursor = Cursors.Hand,
                 Background = c.A == 0 ? BuildCheckerBrush(6) : new SolidColorBrush(c),
-                ToolTip = c.A == 0 ? "Transparent" : $"#{c.R:X2}{c.G:X2}{c.B:X2}"
+                ToolTip = c.A == 0 ? Loc.T("color.transparent") : $"#{c.R:X2}{c.G:X2}{c.B:X2}"
             };
             var captured = c;
             b.MouseLeftButtonUp += (_, _) => SetColor(captured);
@@ -634,10 +761,10 @@ public partial class MainWindow : Window
         try
         {
             if (!File.Exists(path))
-                throw new FileNotFoundException("The file no longer exists.", path);
+                throw new FileNotFoundException(Loc.T("err.fileMissing"), path);
 
             var frames = ImageIO.LoadFrames(path);
-            if (frames.Count == 0) throw new InvalidOperationException("No images found in file.");
+            if (frames.Count == 0) throw new InvalidOperationException(Loc.T("err.noImages"));
 
             var sizes = frames.Select(f => f.PixelWidth)
                               .Where(w => w is >= 8 and <= 256)
@@ -654,12 +781,12 @@ public partial class MainWindow : Window
             UpdateTitle();
             FitZoom();
             if (isIco) RecentFiles.Add(path);
-            StatusHint.Text = $"Opened {Path.GetFileName(path)}";
+            StatusHint.Text = Loc.T("msg.opened", Path.GetFileName(path));
         }
         catch (Exception ex)
         {
             RecentFiles.Remove(path);
-            ModalDialog.Error(this, "Could not open file", ex.Message);
+            ModalDialog.Error(this, Loc.T("err.openTitle"), ex.Message);
         }
     }
 
@@ -674,7 +801,7 @@ public partial class MainWindow : Window
 
         panel.Children.Add(new TextBlock
         {
-            Text = "RECENT ICONS",
+            Text = Loc.T("recentIcons"),
             Style = (Style)Application.Current.Resources["Label.Section"],
             Margin = new Thickness(8, 6, 8, 6)
         });
@@ -683,7 +810,7 @@ public partial class MainWindow : Window
         {
             panel.Children.Add(new TextBlock
             {
-                Text = "No recent files yet.",
+                Text = Loc.T("noRecent"),
                 Foreground = (Brush)Application.Current.Resources["Brush.TextFaint"],
                 Margin = new Thickness(8, 4, 8, 10)
             });
@@ -702,7 +829,7 @@ public partial class MainWindow : Window
 
             var clear = new Button
             {
-                Content = "Clear list",
+                Content = Loc.T("clearList"),
                 Style = (Style)Application.Current.Resources["Button.Flat"],
                 HorizontalContentAlignment = HorizontalAlignment.Left,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -803,11 +930,11 @@ public partial class MainWindow : Window
             _doc.IsDirty = false;
             UpdateTitle();
             RecentFiles.Add(path);
-            StatusHint.Text = $"Saved {Path.GetFileName(path)}";
+            StatusHint.Text = Loc.T("msg.saved", Path.GetFileName(path));
         }
         catch (Exception ex)
         {
-            ModalDialog.Error(this, "Could not save icon", ex.Message);
+            ModalDialog.Error(this, Loc.T("err.saveTitle"), ex.Message);
         }
     }
 
@@ -825,7 +952,7 @@ public partial class MainWindow : Window
         try
         {
             var frames = ImageIO.LoadFrames(path);
-            if (frames.Count == 0) throw new InvalidOperationException("No image data found.");
+            if (frames.Count == 0) throw new InvalidOperationException(Loc.T("err.noImageData"));
 
             // Use the highest-resolution frame available for the best scaling quality.
             var img = frames.OrderByDescending(f => f.PixelWidth).First();
@@ -833,7 +960,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            ModalDialog.Error(this, "Could not import image", ex.Message);
+            ModalDialog.Error(this, Loc.T("err.importTitle"), ex.Message);
         }
     }
 
@@ -845,9 +972,7 @@ public partial class MainWindow : Window
         bool open = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
         e.Effects = ok ? DragDropEffects.Copy : DragDropEffects.None;
         if (ok)
-            StatusHint.Text = open
-                ? "Drop to open as a new tab"
-                : "Drop to place image  (hold Ctrl to open as a new tab)";
+            StatusHint.Text = open ? Loc.T("hint.dropOpen") : Loc.T("hint.dropPlace");
         e.Handled = true;
     }
 
@@ -928,7 +1053,7 @@ public partial class MainWindow : Window
         ImportLayer.Visibility = Visibility.Visible;
         ImportBar.Visibility = Visibility.Visible;
         LayoutImportLayer();
-        StatusHint.Text = $"Placing {name} — drag to move, corners to resize (Shift = keep proportions), then Apply";
+        StatusHint.Text = Loc.T("hint.placing", name);
     }
 
     private Thumb? _moveThumb;
@@ -1023,7 +1148,7 @@ public partial class MainWindow : Window
     private void OnImportCancel(object sender, RoutedEventArgs e)
     {
         EndImport();
-        StatusHint.Text = "Import cancelled";
+        StatusHint.Text = Loc.T("msg.importCancelled");
     }
 
     private void OnImportApply(object sender, RoutedEventArgs e)
@@ -1056,7 +1181,7 @@ public partial class MainWindow : Window
         EndImport();
         RenderActive();
         MarkDirty();
-        StatusHint.Text = targets.Count > 1 ? "Image applied to all sizes" : "Image applied";
+        StatusHint.Text = Loc.T(targets.Count > 1 ? "msg.appliedAll" : "msg.applied");
     }
 
     private void EndImport()
@@ -1083,11 +1208,11 @@ public partial class MainWindow : Window
         try
         {
             ImageIO.ExportPng(dlg.FileName, _active.Buffer);
-            StatusHint.Text = $"Exported {Path.GetFileName(dlg.FileName)}";
+            StatusHint.Text = Loc.T("msg.exported", Path.GetFileName(dlg.FileName));
         }
         catch (Exception ex)
         {
-            ModalDialog.Error(this, "Could not export PNG", ex.Message);
+            ModalDialog.Error(this, Loc.T("err.exportTitle"), ex.Message);
         }
     }
 
@@ -1105,9 +1230,8 @@ public partial class MainWindow : Window
     private bool ConfirmDiscard()
     {
         if (!_doc.IsDirty) return true;
-        return ModalDialog.Confirm(this, "Discard changes?",
-            "This icon has unsaved changes. Continue and lose them?",
-            "Discard", "Cancel");
+        return ModalDialog.Confirm(this, Loc.T("discardTitle"), Loc.T("discardMsg"),
+            Loc.T("discard"), Loc.T("cancel"));
     }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -1115,10 +1239,8 @@ public partial class MainWindow : Window
         int dirty = _sessions.Count(s => s.Doc.IsDirty);
         if (dirty > 0)
         {
-            string msg = dirty == 1
-                ? "One open icon has unsaved changes. Close anyway?"
-                : $"{dirty} open icons have unsaved changes. Close anyway?";
-            if (!ModalDialog.Confirm(this, "Discard changes?", msg, "Close", "Cancel"))
+            string msg = dirty == 1 ? Loc.T("closeOne") : Loc.T("closeMany", dirty);
+            if (!ModalDialog.Confirm(this, Loc.T("discardTitle"), msg, Loc.T("close"), Loc.T("cancel")))
                 e.Cancel = true;
         }
         base.OnClosing(e);

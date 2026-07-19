@@ -28,6 +28,7 @@ A professional multi-resolution icon editor for Windows — a modern, cleaner al
 - **Export** — write a proper multi-image Windows `.ico` (256 px stored PNG-compressed, smaller sizes as 32-bit DIB with an AND mask) or a single `.png`.
 - **Recent files** — a **Recent ▾** menu quick-opens the last 20 icons you saved or opened (persisted between sessions).
 - **Editor niceties** — zoom 1×–32× via slider, **Ctrl + mouse wheel** (anchored at the cursor) or fit-to-window; pixel grid overlay, transparency checkerboard, unlimited undo/redo, live status bar.
+- **Multilingual** — switch the entire UI between **English** and **Español** on the fly via the 🌐 menu; the choice is remembered between sessions. New languages are a small dictionary away.
 - **Modal dialogs** everywhere (no jarring system alerts) and a native dark title bar.
 
 ## Keyboard shortcuts
@@ -56,12 +57,13 @@ The compiled app is a single WPF desktop executable (`IconCreator.exe`).
 
 ```
 src/IconCreator/
-├─ Model/        PixelBuffer, IconSlice, IconDocument
-├─ Editing/      Drawing primitives (line, rect, ellipse, flood fill)
-├─ IO/           IcoEncoder (multi-res .ico), ImageIO (load / PNG export)
-├─ Views/        Modal dialogs, colour picker, new-icon dialog, dark chrome
-├─ Theme/        Professional dark palette + control styles
-└─ MainWindow    Editor shell, tools, undo/redo, file commands
+├─ Model/         PixelBuffer, IconSlice, IconDocument
+├─ Editing/       Drawing primitives (line, rect, ellipse, flood fill)
+├─ IO/            IcoEncoder (multi-res .ico), ImageIO, RecentFiles, AppSettings
+├─ Localization/  Loc — string tables (English + Español) with runtime switching
+├─ Views/         Modal dialogs, colour picker, new-icon dialog, dark chrome
+├─ Theme/         Professional dark palette + control styles
+└─ MainWindow     Editor shell, tabs, tools, undo/redo, file commands
 ```
 
 ## Verification
