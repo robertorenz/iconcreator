@@ -24,7 +24,8 @@ A professional multi-resolution icon editor for Windows — a modern, cleaner al
 - **Colour picker** — RGBA sliders, hex entry, preset swatches, and a transparency-aware preview.
 - **Import** — drop in any PNG/JPG/BMP/GIF/ICO and auto-resample it into every resolution.
 - **Export** — write a proper multi-image Windows `.ico` (256 px stored PNG-compressed, smaller sizes as 32-bit DIB with an AND mask) or a single `.png`.
-- **Editor niceties** — zoom 1×–32×, fit-to-window, pixel grid overlay, transparency checkerboard, unlimited undo/redo, live status bar.
+- **Recent files** — a **Recent ▾** menu quick-opens the last 20 icons you saved or opened (persisted between sessions).
+- **Editor niceties** — zoom 1×–32× via slider, **Ctrl + mouse wheel** (anchored at the cursor) or fit-to-window; pixel grid overlay, transparency checkerboard, unlimited undo/redo, live status bar.
 - **Modal dialogs** everywhere (no jarring system alerts) and a native dark title bar.
 
 ## Keyboard shortcuts

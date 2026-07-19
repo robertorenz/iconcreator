@@ -499,10 +499,17 @@ public partial class MainWindow : Window
         if (!ConfirmDiscard()) return;
         var dlg = new OpenFileDialog { Filter = "Icon (*.ico)|*.ico|" + ImageIO.OpenFilter };
         if (dlg.ShowDialog(this) != true) return;
+        OpenPath(dlg.FileName);
+    }
 
+    private void OpenPath(string path)
+    {
         try
         {
-            var frames = ImageIO.LoadFrames(dlg.FileName);
+            if (!File.Exists(path))
+                throw new FileNotFoundException("The file no longer exists.", path);
+
+            var frames = ImageIO.LoadFrames(path);
             if (frames.Count == 0) throw new InvalidOperationException("No images found in file.");
 
             var sizes = frames.Select(f => f.PixelWidth)
@@ -514,16 +521,133 @@ public partial class MainWindow : Window
             foreach (var slice in _doc.Slices)
                 slice.Buffer.LoadFrom(ImageIO.BestFrameFor(frames, slice.Size));
 
-            _doc.FilePath = dlg.FileName.EndsWith(".ico", StringComparison.OrdinalIgnoreCase) ? dlg.FileName : null;
+            bool isIco = path.EndsWith(".ico", StringComparison.OrdinalIgnoreCase);
+            _doc.FilePath = isIco ? path : null;
             _doc.IsDirty = false;
             UpdateTitle();
             FitZoom();
-            StatusHint.Text = $"Opened {Path.GetFileName(dlg.FileName)}";
+            if (isIco) RecentFiles.Add(path);
+            StatusHint.Text = $"Opened {Path.GetFileName(path)}";
         }
         catch (Exception ex)
         {
+            RecentFiles.Remove(path);
             ModalDialog.Error(this, "Could not open file", ex.Message);
         }
+    }
+
+    private Popup? _recentPopup;
+
+    private void OnRecent(object sender, RoutedEventArgs e)
+    {
+        if (_recentPopup != null) { _recentPopup.IsOpen = false; _recentPopup = null; }
+
+        var list = RecentFiles.Load();
+        var panel = new StackPanel();
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "RECENT ICONS",
+            Style = (Style)Application.Current.Resources["Label.Section"],
+            Margin = new Thickness(8, 6, 8, 6)
+        });
+
+        if (list.Count == 0)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = "No recent files yet.",
+                Foreground = (Brush)Application.Current.Resources["Brush.TextFaint"],
+                Margin = new Thickness(8, 4, 8, 10)
+            });
+        }
+        else
+        {
+            foreach (var path in list)
+                panel.Children.Add(BuildRecentRow(path));
+
+            panel.Children.Add(new System.Windows.Shapes.Rectangle
+            {
+                Height = 1,
+                Fill = (Brush)Application.Current.Resources["Brush.Border"],
+                Margin = new Thickness(6, 6, 6, 6)
+            });
+
+            var clear = new Button
+            {
+                Content = "Clear list",
+                Style = (Style)Application.Current.Resources["Button.Flat"],
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Foreground = (Brush)Application.Current.Resources["Brush.TextDim"]
+            };
+            clear.Click += (_, _) => { RecentFiles.Clear(); _recentPopup!.IsOpen = false; };
+            panel.Children.Add(clear);
+        }
+
+        var border = new Border
+        {
+            Background = (Brush)Application.Current.Resources["Brush.Elevated"],
+            BorderBrush = (Brush)Application.Current.Resources["Brush.BorderStrong"],
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(4),
+            MinWidth = 320,
+            MaxWidth = 460,
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                BlurRadius = 16, ShadowDepth = 3, Opacity = 0.5, Direction = 270,
+                Color = Colors.Black
+            },
+            Child = panel
+        };
+
+        _recentPopup = new Popup
+        {
+            PlacementTarget = BtnRecent,
+            Placement = PlacementMode.Bottom,
+            StaysOpen = false,
+            AllowsTransparency = true,
+            PopupAnimation = PopupAnimation.Fade,
+            Child = border,
+            IsOpen = true
+        };
+    }
+
+    private Button BuildRecentRow(string path)
+    {
+        var content = new StackPanel { Margin = new Thickness(4, 3, 4, 3) };
+        content.Children.Add(new TextBlock
+        {
+            Text = Path.GetFileName(path),
+            FontSize = 13,
+            Foreground = (Brush)Application.Current.Resources["Brush.Text"],
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = Path.GetDirectoryName(path) ?? "",
+            FontSize = 11,
+            Foreground = (Brush)Application.Current.Resources["Brush.TextFaint"],
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+
+        var btn = new Button
+        {
+            Content = content,
+            Style = (Style)Application.Current.Resources["Button.Flat"],
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Padding = new Thickness(6, 2, 6, 2),
+            ToolTip = path
+        };
+        var captured = path;
+        btn.Click += (_, _) =>
+        {
+            _recentPopup!.IsOpen = false;
+            if (ConfirmDiscard()) OpenPath(captured);
+        };
+        return btn;
     }
 
     private void OnSave(object sender, RoutedEventArgs e)
@@ -551,6 +675,7 @@ public partial class MainWindow : Window
             _doc.FilePath = path;
             _doc.IsDirty = false;
             UpdateTitle();
+            RecentFiles.Add(path);
             StatusHint.Text = $"Saved {Path.GetFileName(path)}";
         }
         catch (Exception ex)

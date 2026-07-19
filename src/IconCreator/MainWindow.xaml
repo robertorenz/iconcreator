@@ -27,6 +27,7 @@
 
                     <Button x:Name="BtnNew" Style="{StaticResource Button.Flat}" Content="New" Click="OnNew"/>
                     <Button x:Name="BtnOpen" Style="{StaticResource Button.Flat}" Content="Open" Click="OnOpen"/>
+                    <Button x:Name="BtnRecent" Style="{StaticResource Button.Flat}" Content="Recent ▾" Click="OnRecent"/>
                     <Button x:Name="BtnSave" Style="{StaticResource Button.Flat}" Content="Save" Click="OnSave"/>
                     <Button x:Name="BtnSaveAs" Style="{StaticResource Button.Flat}" Content="Save As" Click="OnSaveAs"/>
                     <Rectangle Width="1" Margin="8,4" Fill="{StaticResource Brush.Border}"/>
