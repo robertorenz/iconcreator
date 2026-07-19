@@ -4,6 +4,9 @@ obj/
 *.user
 .vs/
 
+## Published single-file build (distribute via Releases, not git)
+run/
+
 ## Rider / VS Code
 .idea/
 .vscode/
