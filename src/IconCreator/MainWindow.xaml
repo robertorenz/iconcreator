@@ -60,7 +60,8 @@
             <!-- Editor canvas -->
             <Grid Grid.Column="1" Background="{StaticResource Brush.Window}">
                 <ScrollViewer x:Name="CanvasScroll" HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto" Padding="24">
+                              VerticalScrollBarVisibility="Auto" Padding="24"
+                              PreviewMouseWheel="OnCanvasWheel">
                     <Grid x:Name="CanvasHost" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Border x:Name="CheckerBorder" SnapsToDevicePixels="True">
                             <Grid>

@@ -347,6 +347,31 @@ public partial class MainWindow : Window
         if (_active != null) RenderActive();
     }
 
+    /// <summary>Ctrl + mouse wheel zooms, anchored at the pixel under the cursor.</summary>
+    private void OnCanvasWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control) || _active == null) return;
+        e.Handled = true; // suppress the ScrollViewer's own scroll
+
+        double oldZoom = _zoom;
+        Point imgPos = e.GetPosition(EditImage);   // cursor within the image
+        Point vpPos = e.GetPosition(CanvasScroll);  // cursor within the viewport
+
+        double step = Math.Max(1, Math.Round(oldZoom * 0.2));
+        double newZoom = Math.Clamp(oldZoom + (e.Delta > 0 ? step : -step),
+                                    ZoomSlider.Minimum, ZoomSlider.Maximum);
+        if (Math.Abs(newZoom - oldZoom) < 0.5) return;
+
+        ZoomSlider.Value = newZoom;   // fires OnZoomChanged → RenderActive resizes the image
+        CanvasScroll.UpdateLayout();
+
+        // Keep the same image point under the cursor after the resize.
+        var newLocal = new Point(imgPos.X * newZoom / oldZoom, imgPos.Y * newZoom / oldZoom);
+        Point moved = EditImage.TranslatePoint(newLocal, CanvasScroll);
+        CanvasScroll.ScrollToHorizontalOffset(CanvasScroll.HorizontalOffset + (moved.X - vpPos.X));
+        CanvasScroll.ScrollToVerticalOffset(CanvasScroll.VerticalOffset + (moved.Y - vpPos.Y));
+    }
+
     private void OnFitZoom(object sender, RoutedEventArgs e) => FitZoom();
 
     private void FitZoom()
