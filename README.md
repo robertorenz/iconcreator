@@ -2,7 +2,7 @@
 
 A professional multi-resolution icon editor for Windows — a modern, cleaner alternative to Axialis IconWorkshop. Built with **C# / .NET 9 / WPF**.
 
-![IconCreator Studio](docs/screenshot.png)
+![IconCreator Studio](docs/screenshot-v1.2.png)
 
 ## Why it's better
 
