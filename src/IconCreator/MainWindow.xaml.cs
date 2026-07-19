@@ -891,7 +891,7 @@ public partial class MainWindow : Window
         ImportLayer.Visibility = Visibility.Visible;
         ImportBar.Visibility = Visibility.Visible;
         LayoutImportLayer();
-        StatusHint.Text = $"Placing {name} — drag to move, corners to resize, then Apply";
+        StatusHint.Text = $"Placing {name} — drag to move, corners to resize (Alt = keep proportions), then Apply";
     }
 
     private Thumb? _moveThumb;
@@ -910,15 +910,27 @@ public partial class MainWindow : Window
     private void OnCornerDrag(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
     {
         double dx = e.HorizontalChange / _zoom, dy = e.VerticalChange / _zoom;
-        switch (((Thumb)sender).Tag as string)
+        string tag = (string)((Thumb)sender).Tag!;
+        double x = _impX, y = _impY, w = _impW, h = _impH;
+
+        double nw = tag is "TL" or "BL" ? w - dx : w + dx;
+        double nh = tag is "TL" or "TR" ? h - dy : h + dy;
+        nw = Math.Max(1, nw);
+        nh = Math.Max(1, nh);
+
+        // Hold Alt to keep the image's original aspect ratio.
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) && _importImage != null)
         {
-            case "TL": _impX += dx; _impY += dy; _impW -= dx; _impH -= dy; break;
-            case "TR": _impY += dy; _impW += dx; _impH -= dy; break;
-            case "BL": _impX += dx; _impW -= dx; _impH += dy; break;
-            case "BR": _impW += dx; _impH += dy; break;
+            double aspect = (double)_importImage.PixelWidth / _importImage.PixelHeight;
+            if (Math.Abs(dy) > Math.Abs(dx)) nw = nh * aspect;   // vertical drag drives height
+            else nh = nw / aspect;                               // horizontal drag drives width
         }
-        _impW = Math.Max(1, _impW);
-        _impH = Math.Max(1, _impH);
+
+        // Keep the corner opposite the dragged one pinned in place.
+        _impX = tag is "TL" or "BL" ? x + w - nw : x;
+        _impY = tag is "TL" or "TR" ? y + h - nh : y;
+        _impW = nw;
+        _impH = nh;
         LayoutImportLayer();
     }
 
@@ -1079,6 +1091,13 @@ public partial class MainWindow : Window
     {
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         bool shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+
+        // Keep focus on the canvas when Alt is used to constrain a resize.
+        if (_importing && e.Key == Key.System && e.SystemKey is Key.LeftAlt or Key.RightAlt)
+        {
+            e.Handled = true;
+            return;
+        }
 
         if (ctrl)
         {

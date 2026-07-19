@@ -21,7 +21,7 @@ A professional multi-resolution icon editor for Windows — a modern, cleaner al
 - **Multi-document tabs (MDI)** — open many icons at once, each in its own tab with its own undo history. `+` for a new document, `Ctrl+Tab` to cycle, `Ctrl+W` to close, middle-click a tab to close it; unsaved tabs show a ● and prompt before closing.
 - **Multi-resolution documents** — edit 16, 24, 32, 48, 64, 128 and 256 px slices side by side; tick which ones ship in the exported `.ico`.
 - **Full drawing toolset** — pencil, eraser, flood fill (with tolerance), colour picker, line, rectangle / filled rectangle, ellipse / filled ellipse, adjustable brush size.
-- **Import as a movable layer** — imported images arrive as a floating placement you can **drag, resize (corner handles), Fit, Center or Reset** before committing. **Apply** bakes it into the current size, or tick **All sizes** to composite it into every resolution at once.
+- **Import as a movable layer** — imported images arrive as a floating placement you can **drag, resize (corner handles — hold `Alt` to keep proportions), Fit, Center or Reset** before committing. **Apply** bakes it into the current size, or tick **All sizes** to composite it into every resolution at once.
 - **Real alpha** — every pixel is straight-alpha BGRA; optional alpha-blend mode composites brush strokes over existing pixels.
 - **Colour picker** — RGBA sliders, hex entry, preset swatches, and a transparency-aware preview.
 - **Import** — bring in any PNG/JPG/BMP/GIF/ICO as a floating layer, position it, then apply to the current size or all sizes.
