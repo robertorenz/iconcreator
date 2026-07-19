@@ -203,7 +203,7 @@ public partial class MainWindow : Window
         switch (_tool)
         {
             case ToolKind.Pencil:
-                Drawing.Stamp(_active.Buffer, px, py, Argb, _brushSize, _alphaBlend());
+                Drawing.Stamp(_active.Buffer, px, py, Argb, _brushSize, BlendActive());
                 break;
             case ToolKind.Eraser:
                 Drawing.Stamp(_active.Buffer, px, py, 0, _brushSize, false);
@@ -225,30 +225,30 @@ public partial class MainWindow : Window
         switch (_tool)
         {
             case ToolKind.Pencil:
-                Drawing.Line(_active.Buffer, _lastX, _lastY, px, py, Argb, _brushSize, _alphaBlend());
+                Drawing.Line(_active.Buffer, _lastX, _lastY, px, py, Argb, _brushSize, BlendActive());
                 break;
             case ToolKind.Eraser:
                 Drawing.Line(_active.Buffer, _lastX, _lastY, px, py, 0, _brushSize, false);
                 break;
             case ToolKind.Line:
                 _active.Buffer.Restore(_strokeSnapshot!);
-                Drawing.Line(_active.Buffer, _startX, _startY, px, py, Argb, _brushSize, _alphaBlend());
+                Drawing.Line(_active.Buffer, _startX, _startY, px, py, Argb, _brushSize, BlendActive());
                 break;
             case ToolKind.Rectangle:
                 _active.Buffer.Restore(_strokeSnapshot!);
-                Drawing.Rectangle(_active.Buffer, _startX, _startY, px, py, Argb, _brushSize, false, _alphaBlend());
+                Drawing.Rectangle(_active.Buffer, _startX, _startY, px, py, Argb, _brushSize, false, BlendActive());
                 break;
             case ToolKind.RectangleFilled:
                 _active.Buffer.Restore(_strokeSnapshot!);
-                Drawing.Rectangle(_active.Buffer, _startX, _startY, px, py, Argb, _brushSize, true, _alphaBlend());
+                Drawing.Rectangle(_active.Buffer, _startX, _startY, px, py, Argb, _brushSize, true, BlendActive());
                 break;
             case ToolKind.Ellipse:
                 _active.Buffer.Restore(_strokeSnapshot!);
-                Drawing.Ellipse(_active.Buffer, _startX, _startY, px, py, Argb, _brushSize, false, _alphaBlend());
+                Drawing.Ellipse(_active.Buffer, _startX, _startY, px, py, Argb, _brushSize, false, BlendActive());
                 break;
             case ToolKind.EllipseFilled:
                 _active.Buffer.Restore(_strokeSnapshot!);
-                Drawing.Ellipse(_active.Buffer, _startX, _startY, px, py, Argb, _brushSize, true, _alphaBlend());
+                Drawing.Ellipse(_active.Buffer, _startX, _startY, px, py, Argb, _brushSize, true, BlendActive());
                 break;
             default:
                 return;
@@ -284,6 +284,13 @@ public partial class MainWindow : Window
     }
 
     private bool _alphaBlend() => AlphaBlendCheck.IsChecked == true;
+
+    /// <summary>
+    /// Effective blend mode for the current foreground colour. A fully transparent
+    /// colour must overwrite (write alpha 0) rather than blend — blending transparent
+    /// over a pixel is a no-op, so it would appear to "do nothing".
+    /// </summary>
+    private bool BlendActive() => _alphaBlend() && _color.A != 0;
 
     // ============================ Undo / redo ============================
 
