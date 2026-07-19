@@ -66,6 +66,11 @@ public partial class MainWindow : Window
         NativeChrome.ApplyDarkTitleBar(this);
         BuildToolPalette();
         BuildPalette();
+
+        AllowDrop = true;
+        PreviewDragOver += OnFileDragOver;
+        PreviewDrop += OnFileDrop;
+
         Loaded += (_, _) => { NewDocument(IconDocument.StandardSizes, select: 32); FitZoom(); };
     }
 
@@ -812,20 +817,42 @@ public partial class MainWindow : Window
     {
         var dlg = new OpenFileDialog { Filter = ImageIO.OpenFilter };
         if (dlg.ShowDialog(this) != true) return;
+        ImportFromFile(dlg.FileName);
+    }
 
+    private void ImportFromFile(string path)
+    {
         try
         {
-            var frames = ImageIO.LoadFrames(dlg.FileName);
+            var frames = ImageIO.LoadFrames(path);
             if (frames.Count == 0) throw new InvalidOperationException("No image data found.");
 
             // Use the highest-resolution frame available for the best scaling quality.
             var img = frames.OrderByDescending(f => f.PixelWidth).First();
-            BeginImport(img, Path.GetFileName(dlg.FileName));
+            BeginImport(img, Path.GetFileName(path));
         }
         catch (Exception ex)
         {
             ModalDialog.Error(this, "Could not import image", ex.Message);
         }
+    }
+
+    // ---- Drag & drop a file anywhere over the window to place it ----
+
+    private void OnFileDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)
+            ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void OnFileDrop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0) return;
+        e.Handled = true;
+        Activate();
+        ImportFromFile(files[0]);
     }
 
     // ============================ Import placement layer ============================
@@ -891,7 +918,7 @@ public partial class MainWindow : Window
         ImportLayer.Visibility = Visibility.Visible;
         ImportBar.Visibility = Visibility.Visible;
         LayoutImportLayer();
-        StatusHint.Text = $"Placing {name} — drag to move, corners to resize (Alt = keep proportions), then Apply";
+        StatusHint.Text = $"Placing {name} — drag to move, corners to resize (Shift = keep proportions), then Apply";
     }
 
     private Thumb? _moveThumb;
@@ -918,8 +945,8 @@ public partial class MainWindow : Window
         nw = Math.Max(1, nw);
         nh = Math.Max(1, nh);
 
-        // Hold Alt to keep the image's original aspect ratio.
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) && _importImage != null)
+        // Hold Shift to keep the image's original aspect ratio.
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && _importImage != null)
         {
             double aspect = (double)_importImage.PixelWidth / _importImage.PixelHeight;
             if (Math.Abs(dy) > Math.Abs(dx)) nw = nh * aspect;   // vertical drag drives height
@@ -1091,13 +1118,6 @@ public partial class MainWindow : Window
     {
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         bool shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
-
-        // Keep focus on the canvas when Alt is used to constrain a resize.
-        if (_importing && e.Key == Key.System && e.SystemKey is Key.LeftAlt or Key.RightAlt)
-        {
-            e.Handled = true;
-            return;
-        }
 
         if (ctrl)
         {
