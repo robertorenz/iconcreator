@@ -841,8 +841,13 @@ public partial class MainWindow : Window
 
     private void OnFileDragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)
-            ? DragDropEffects.Copy : DragDropEffects.None;
+        bool ok = e.Data.GetDataPresent(DataFormats.FileDrop);
+        bool open = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+        e.Effects = ok ? DragDropEffects.Copy : DragDropEffects.None;
+        if (ok)
+            StatusHint.Text = open
+                ? "Drop to open as a new tab"
+                : "Drop to place image  (hold Ctrl to open as a new tab)";
         e.Handled = true;
     }
 
@@ -852,7 +857,12 @@ public partial class MainWindow : Window
         if (e.Data.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0) return;
         e.Handled = true;
         Activate();
-        ImportFromFile(files[0]);
+
+        // Ctrl = open each file as its own document; otherwise place the first as a layer.
+        if ((e.KeyStates & DragDropKeyStates.ControlKey) != 0)
+            foreach (var f in files) OpenPath(f);
+        else
+            ImportFromFile(files[0]);
     }
 
     // ============================ Import placement layer ============================
