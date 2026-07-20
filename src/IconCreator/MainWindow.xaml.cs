@@ -835,6 +835,28 @@ public partial class MainWindow : Window
         else OpenPath(path);
     }
 
+    /// <summary>Create a new standard multi-resolution icon and resample an image into every size.</summary>
+    private void NewRasterFromImage(string path)
+    {
+        try
+        {
+            var frames = ImageIO.LoadFrames(path);
+            if (frames.Count == 0) throw new InvalidOperationException(Loc.T("err.noImageData"));
+
+            NewDocument(IconDocument.StandardSizes, 32);
+            foreach (var slice in _doc.Slices)
+                slice.Buffer.LoadFrom(ImageIO.BestFrameFor(frames, slice.Size));
+
+            MarkDirty();
+            FitZoom();
+            StatusHint.Text = Loc.T("msg.opened", Path.GetFileName(path));
+        }
+        catch (Exception ex)
+        {
+            ModalDialog.Error(this, Loc.T("err.importTitle"), ex.Message);
+        }
+    }
+
     private void OpenVectorFile(string path)
     {
         var session = NewVectorDocument();
@@ -1104,13 +1126,15 @@ public partial class MainWindow : Window
 
     // ---- Drag & drop a file anywhere over the window to place it ----
 
+    private static bool IsSvg(string path) => path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase);
+
     private void OnFileDragOver(object sender, DragEventArgs e)
     {
         bool ok = e.Data.GetDataPresent(DataFormats.FileDrop);
         bool ctrl = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
         e.Effects = ok ? DragDropEffects.Copy : DragDropEffects.None;
         if (ok)
-            StatusHint.Text = ctrl ? Loc.T("hint.dropVectorNew")
+            StatusHint.Text = ctrl ? Loc.T("hint.dropNewTab")
                             : _cur.Kind == SessionKind.Vector ? Loc.T("hint.dropVectorHere")
                             : Loc.T("hint.dropPlace");
         e.Handled = true;
@@ -1118,8 +1142,9 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Drop routing:
-    ///  • Ctrl            → new vector tab, import the file(s) as resizable elements.
-    ///  • onto a vector   → import into that drawing as resizable elements.
+    ///  • Ctrl            → a new tab per file in the file's own format
+    ///                      (.svg → vector tab, raster image → new raster icon).
+    ///  • onto a vector   → import into that drawing as a resizable element.
     ///  • onto a raster   → place onto the canvas (resizable), then apply.
     /// </summary>
     private void OnFileDrop(object sender, DragEventArgs e)
@@ -1133,8 +1158,24 @@ public partial class MainWindow : Window
 
         if (ctrl)
         {
-            var s = NewVectorDocument();
-            foreach (var f in files) s.Vector!.ImportFile(f);
+            // New tab per file, matching its original format.
+            DocSession? vec = null;
+            foreach (var f in files)
+            {
+                if (IsSvg(f))
+                {
+                    vec ??= NewVectorDocument();       // group SVGs into one new vector tab
+                    vec.Vector!.ImportFile(f);
+                }
+                else if (f.EndsWith(".ico", StringComparison.OrdinalIgnoreCase))
+                {
+                    OpenPath(f);                        // .ico → open its own resolutions
+                }
+                else
+                {
+                    NewRasterFromImage(f);              // png/bmp/jpg/… → new multi-size icon
+                }
+            }
             return;
         }
 
