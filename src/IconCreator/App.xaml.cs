@@ -104,6 +104,13 @@ public partial class App : Application
             File.WriteAllText(imgPath, imgSvg);
             var imgBack = SvgReader.Read(imgPath, 256);
             report.AppendLine($"imageSvg has <image>={imgSvg.Contains("<image")} dataUri={imgSvg.Contains("data:image/png;base64,")} readBack={imgBack.Count} kind={(imgBack.Count > 0 ? imgBack[0].Kind.ToString() : "none")}");
+
+            // PSD read: synthesise a Photoshop file, then flatten it back.
+            string psdPath = Path.Combine(Path.GetTempPath(), "iconcreator_test.psd");
+            using (var mk = new ImageMagick.MagickImage(new ImageMagick.MagickColor("#2F81D6"), 40, 40))
+                mk.Write(psdPath, ImageMagick.MagickFormat.Psd);
+            var psd = ImageIO.ReadPsd(psdPath);
+            report.AppendLine($"psd={psd.PixelWidth}x{psd.PixelHeight} format={psd.Format}");
         }
         catch (Exception ex)
         {

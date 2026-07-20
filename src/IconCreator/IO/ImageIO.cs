@@ -8,17 +8,20 @@ using SharpVectors.Renderers.Wpf;
 
 namespace IconCreator.IO;
 
-/// <summary>Loading of external images (.png/.jpg/.bmp/.ico/.gif/.svg) and PNG export.</summary>
+/// <summary>Loading of external images (.png/.jpg/.bmp/.ico/.gif/.svg/.psd) and PNG export.</summary>
 public static class ImageIO
 {
     public const string OpenFilter =
-        "Images (*.png;*.jpg;*.jpeg;*.bmp;*.ico;*.gif;*.svg)|*.png;*.jpg;*.jpeg;*.bmp;*.ico;*.gif;*.svg|All files (*.*)|*.*";
+        "Images (*.png;*.jpg;*.jpeg;*.bmp;*.ico;*.gif;*.svg;*.psd)|*.png;*.jpg;*.jpeg;*.bmp;*.ico;*.gif;*.svg;*.psd|All files (*.*)|*.*";
 
-    /// <summary>Load every frame from a file (an .ico can carry many; an .svg is rasterised).</summary>
+    /// <summary>Load every frame from a file (an .ico can carry many; .svg is rasterised; .psd is flattened).</summary>
     public static IReadOnlyList<BitmapSource> LoadFrames(string path)
     {
         if (path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
             return new[] { RasterizeSvg(path, 512) };
+
+        if (path.EndsWith(".psd", StringComparison.OrdinalIgnoreCase))
+            return new[] { ReadPsd(path) };
 
         using var fs = File.OpenRead(path);
         var decoder = BitmapDecoder.Create(fs,
@@ -104,6 +107,25 @@ public static class ImageIO
         var buf = new int[size * size];
         straight.CopyPixels(buf, size * 4, 0);
         return buf;
+    }
+
+    /// <summary>Read a Photoshop .psd and return its flattened composite as a BGRA bitmap.</summary>
+    public static BitmapSource ReadPsd(string path)
+    {
+        using var image = new ImageMagick.MagickImage(path);
+        image.Alpha(ImageMagick.AlphaOption.Set);          // keep transparency in the composite
+
+        using var ms = new MemoryStream();
+        image.Write(ms, ImageMagick.MagickFormat.Png);     // hand off to WPF via PNG
+        ms.Position = 0;
+
+        var decoder = BitmapDecoder.Create(ms,
+            BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        BitmapSource frame = decoder.Frames[0];
+        if (frame.Format != System.Windows.Media.PixelFormats.Bgra32)
+            frame = new FormatConvertedBitmap(frame, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+        frame.Freeze();
+        return frame;
     }
 
     public static void ExportPng(string path, PixelBuffer buffer)

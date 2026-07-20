@@ -24,7 +24,7 @@ A professional multi-resolution icon editor for Windows — a modern, cleaner al
 - **Import as a movable layer** — **Import Image** (or a drop onto a raster tab) brings the image in as a floating placement you can **drag, resize (corner handles — hold `Shift` to keep proportions), Fit, Center or Reset** before committing. **Apply** bakes it into the current size, or tick **All sizes** to composite it into every resolution at once.
 - **Real alpha** — every pixel is straight-alpha BGRA; optional alpha-blend mode composites brush strokes over existing pixels.
 - **Colour picker** — RGBA sliders, hex entry, preset swatches, and a transparency-aware preview.
-- **Import & drag-drop** — bring in any PNG/JPG/BMP/GIF/ICO/SVG. Drop onto a **raster** tab to place it on the canvas (resizable) and apply; drop onto a **vector** tab to add it as a resizable element; hold **Ctrl** to import into a brand-new vector tab. SVGs are rasterised from vector data, so they stay sharp.
+- **Import & drag-drop** — bring in any PNG/JPG/BMP/GIF/ICO/SVG/**PSD**. Drop onto a **raster** tab to place it on the canvas (resizable) and apply; drop onto a **vector** tab to add it as a resizable element; hold **Ctrl** to open each file in a new tab in its own format (SVG → vector, image → raster icon). SVGs are rasterised from vector data (stay sharp); Photoshop **PSD** files are read as their flattened composite.
 - **Export** — write a proper multi-image Windows `.ico` (256 px stored PNG-compressed, smaller sizes as 32-bit DIB with an AND mask) or a single `.png`.
 - **Recent files** — a **Recent ▾** menu quick-opens the last 20 icons you saved or opened (persisted between sessions).
 - **Editor niceties** — zoom 1×–32× via slider, **Ctrl + mouse wheel** (anchored at the cursor) or fit-to-window; pixel grid overlay, transparency checkerboard, unlimited undo/redo, live status bar.
@@ -61,7 +61,7 @@ The compiled app is a single WPF desktop executable (`IconCreator.exe`).
 src/IconCreator/
 ├─ Model/         PixelBuffer, IconSlice, IconDocument
 ├─ Editing/       Drawing primitives (line, rect, ellipse, flood fill)
-├─ IO/            IcoEncoder, ImageIO (+SVG raster), SvgWriter/SvgReader, RecentFiles, AppSettings
+├─ IO/            IcoEncoder, ImageIO (+SVG raster, +PSD via Magick.NET), SvgWriter/SvgReader, RecentFiles, AppSettings
 ├─ Localization/  Loc — string tables (English + Español) with runtime switching
 ├─ Vector/        VShape — vector primitives + transforms + SVG serialisation
 ├─ Views/         Modal/colour/new-icon dialogs, VectorEditor control, ToolIcons, dark chrome
