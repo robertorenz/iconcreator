@@ -19,14 +19,14 @@ public partial class VectorEditor : UserControl
 
     public const int Board = 256;
 
-    private static readonly (VTool tool, string glyph, string key)[] ToolDefs =
+    private static readonly (VTool tool, string icon, string key)[] ToolDefs =
     {
-        (VTool.Select,    "↖", "vec.select"),
-        (VTool.Rectangle, "▭", "tool.rect"),
-        (VTool.Ellipse,   "◯", "tool.ellipse"),
-        (VTool.Line,      "╱", "tool.line"),
-        (VTool.Path,      "✎", "vec.path"),
-        (VTool.Text,      "T", "vec.text"),
+        (VTool.Select,    "select",  "vec.select"),
+        (VTool.Rectangle, "rect",    "tool.rect"),
+        (VTool.Ellipse,   "ellipse", "tool.ellipse"),
+        (VTool.Line,      "line",    "tool.line"),
+        (VTool.Path,      "path",    "vec.path"),
+        (VTool.Text,      "text",    "vec.text"),
     };
 
     private readonly List<VShape> _shapes = new();
@@ -151,12 +151,12 @@ public partial class VectorEditor : UserControl
 
     private void BuildTools()
     {
-        foreach (var (tool, glyph, key) in ToolDefs)
+        foreach (var (tool, icon, key) in ToolDefs)
         {
             var btn = new ToggleButton
             {
                 Style = (Style)Application.Current.Resources["Button.Tool"],
-                Content = glyph, Margin = new Thickness(0, 0, 0, 6), Tag = tool,
+                Content = ToolIcons.Make(icon), Margin = new Thickness(0, 0, 0, 6), Tag = tool,
                 IsChecked = tool == _tool
             };
             btn.Checked += (_, _) => SelectTool(tool);

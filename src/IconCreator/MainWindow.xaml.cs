@@ -52,17 +52,17 @@ public partial class MainWindow : Window
     private readonly Dictionary<int, Border> _sizeRows = new();
     private readonly List<ToggleButton> _toolButtons = new();
 
-    private static readonly (ToolKind kind, string glyph, string key, string hint)[] Tools =
+    private static readonly (ToolKind kind, string icon, string key, string hint)[] Tools =
     {
-        (ToolKind.Pencil,          "✏",  "tool.pencil",       "B"),
-        (ToolKind.Eraser,          "▭",  "tool.eraser",       "E"),
-        (ToolKind.Fill,            "🪣",  "tool.fill",         "G"),
-        (ToolKind.Eyedropper,      "💧",  "tool.eyedropper",   "I"),
-        (ToolKind.Line,            "╱",  "tool.line",         "L"),
-        (ToolKind.Rectangle,       "▢",  "tool.rect",         "R"),
-        (ToolKind.RectangleFilled, "▣",  "tool.rectFilled",   "Shift+R"),
-        (ToolKind.Ellipse,         "◯",  "tool.ellipse",      "O"),
-        (ToolKind.EllipseFilled,   "●",  "tool.ellipseFilled","Shift+O"),
+        (ToolKind.Pencil,          "pencil",        "tool.pencil",       "B"),
+        (ToolKind.Eraser,          "eraser",        "tool.eraser",       "E"),
+        (ToolKind.Fill,            "fill",          "tool.fill",         "G"),
+        (ToolKind.Eyedropper,      "eyedropper",    "tool.eyedropper",   "I"),
+        (ToolKind.Line,            "line",          "tool.line",         "L"),
+        (ToolKind.Rectangle,       "rect",          "tool.rect",         "R"),
+        (ToolKind.RectangleFilled, "rectFilled",    "tool.rectFilled",   "Shift+R"),
+        (ToolKind.Ellipse,         "ellipse",       "tool.ellipse",      "O"),
+        (ToolKind.EllipseFilled,   "ellipseFilled", "tool.ellipseFilled","Shift+O"),
     };
 
     private readonly AppSettings _settings = AppSettings.Load();
@@ -421,12 +421,12 @@ public partial class MainWindow : Window
 
     private void BuildToolPalette()
     {
-        foreach (var (kind, glyph, key, hint) in Tools)
+        foreach (var (kind, icon, key, hint) in Tools)
         {
             var btn = new ToggleButton
             {
                 Style = (Style)Resources["Button.Tool"] ?? (Style)Application.Current.Resources["Button.Tool"],
-                Content = glyph,
+                Content = ToolIcons.Make(icon),
                 Margin = new Thickness(0, 0, 0, 6),
                 ToolTip = $"{Loc.T(key)}  ({hint})",
                 Tag = kind,
