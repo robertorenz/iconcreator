@@ -90,6 +90,30 @@ public partial class VectorEditor : UserControl
         Changed?.Invoke();
     }
 
+    /// <summary>Import an image or SVG as a resizable element in this drawing.</summary>
+    public void ImportFile(string path)
+    {
+        var frames = ImageIO.LoadFrames(path);          // rasterises .svg, decodes images
+        if (frames.Count == 0) return;
+        var src = frames.OrderByDescending(f => f.PixelWidth).First();
+
+        double max = Board * 0.85;
+        double scale = Math.Min(max / src.PixelWidth, max / src.PixelHeight);
+        double w = src.PixelWidth * scale, h = src.PixelHeight * scale;
+
+        var img = new Image { Source = src, Stretch = Stretch.Fill, Width = w, Height = h };
+        Canvas.SetLeft(img, (Board - w) / 2);
+        Canvas.SetTop(img, (Board - h) / 2);
+        ArtBoard.Children.Add(img);
+
+        var shape = new VShape(VKind.Image, img);
+        _shapes.Add(shape);
+        SelectTool(VTool.Select);   // so the user can immediately move/resize it
+        Select(shape);
+        UpdateCount();
+        MarkDirty();
+    }
+
     public void SaveSvg(string path)
     {
         CommitActiveText();

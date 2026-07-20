@@ -90,6 +90,20 @@ public partial class App : Application
             // SVG read-back: parse the authored file into editable shapes.
             var reparsed = SvgReader.Read(outSvg, 256);
             report.AppendLine($"svgReadBack shapes={reparsed.Count} kinds={string.Join(",", reparsed.Select(s => s.Kind))}");
+
+            // Vector image element round-trip: <image> with embedded PNG.
+            var pix = new int[8 * 8];
+            for (int i = 0; i < pix.Length; i++) pix[i] = unchecked((int)0xFFFF0000);
+            var bs = System.Windows.Media.Imaging.BitmapSource.Create(8, 8, 96, 96,
+                System.Windows.Media.PixelFormats.Bgra32, null, pix, 8 * 4);
+            var imgEl = new System.Windows.Controls.Image { Source = bs, Width = 100, Height = 100 };
+            System.Windows.Controls.Canvas.SetLeft(imgEl, 50);
+            System.Windows.Controls.Canvas.SetTop(imgEl, 50);
+            string imgSvg = SvgWriter.Build(256, new[] { new Vector.VShape(Vector.VKind.Image, imgEl) });
+            string imgPath = Path.Combine(Path.GetTempPath(), "iconcreator_image.svg");
+            File.WriteAllText(imgPath, imgSvg);
+            var imgBack = SvgReader.Read(imgPath, 256);
+            report.AppendLine($"imageSvg has <image>={imgSvg.Contains("<image")} dataUri={imgSvg.Contains("data:image/png;base64,")} readBack={imgBack.Count} kind={(imgBack.Count > 0 ? imgBack[0].Kind.ToString() : "none")}");
         }
         catch (Exception ex)
         {

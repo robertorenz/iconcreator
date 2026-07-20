@@ -1107,13 +1107,21 @@ public partial class MainWindow : Window
     private void OnFileDragOver(object sender, DragEventArgs e)
     {
         bool ok = e.Data.GetDataPresent(DataFormats.FileDrop);
-        bool open = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+        bool ctrl = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
         e.Effects = ok ? DragDropEffects.Copy : DragDropEffects.None;
         if (ok)
-            StatusHint.Text = open ? Loc.T("hint.dropOpen") : Loc.T("hint.dropPlace");
+            StatusHint.Text = ctrl ? Loc.T("hint.dropVectorNew")
+                            : _cur.Kind == SessionKind.Vector ? Loc.T("hint.dropVectorHere")
+                            : Loc.T("hint.dropPlace");
         e.Handled = true;
     }
 
+    /// <summary>
+    /// Drop routing:
+    ///  • Ctrl            → new vector tab, import the file(s) as resizable elements.
+    ///  • onto a vector   → import into that drawing as resizable elements.
+    ///  • onto a raster   → place onto the canvas (resizable), then apply.
+    /// </summary>
     private void OnFileDrop(object sender, DragEventArgs e)
     {
         if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
@@ -1121,21 +1129,23 @@ public partial class MainWindow : Window
         e.Handled = true;
         Activate();
 
-        bool open = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+        bool ctrl = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
 
-        // SVGs always open as editable vector tabs.
-        var svgs = files.Where(f => f.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)).ToList();
-        var others = files.Where(f => !f.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)).ToList();
-
-        foreach (var f in svgs) OpenVectorFile(f);
-
-        if (others.Count > 0)
+        if (ctrl)
         {
-            if (open || _cur.Kind == SessionKind.Vector)
-                foreach (var f in others) OpenPath(f);   // open as raster tabs
-            else
-                ImportFromFile(others[0]);                // place onto current raster canvas
+            var s = NewVectorDocument();
+            foreach (var f in files) s.Vector!.ImportFile(f);
+            return;
         }
+
+        if (_cur.Kind == SessionKind.Vector)
+        {
+            foreach (var f in files) _cur.Vector!.ImportFile(f);
+            return;
+        }
+
+        // Raster tab: place the first dropped file onto the canvas.
+        ImportFromFile(files[0]);
     }
 
     // ============================ Import placement layer ============================

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Xml.Linq;
 using IconCreator.Vector;
@@ -84,6 +85,7 @@ public static class SvgReader
                 case "polyline": AddPoly(child, m, outp, false); break;
                 case "polygon": AddPoly(child, m, outp, true); break;
                 case "text": AddText(child, m, outp); break;
+                case "image": AddImage(child, m, outp); break;
                 default: /* path & others: skip */ break;
             }
         }
@@ -177,6 +179,35 @@ public static class SvgReader
         Canvas.SetLeft(tb, pos.X);
         Canvas.SetTop(tb, pos.Y - fs * 0.8);   // SVG y is the baseline
         o.Add(new VShape(VKind.Text, tb));
+    }
+
+    private static void AddImage(XElement e, Affine m, List<VShape> o)
+    {
+        XNamespace xlink = "http://www.w3.org/1999/xlink";
+        string? href = (string?)e.Attribute(xlink + "href") ?? (string?)e.Attribute("href");
+        if (href == null) return;
+        int comma = href.IndexOf(',');
+        if (!href.StartsWith("data:") || comma < 0) return;   // only embedded data URIs
+        BitmapImage bmp;
+        try
+        {
+            var bytes = Convert.FromBase64String(href[(comma + 1)..]);
+            bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.StreamSource = new System.IO.MemoryStream(bytes);
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.EndInit();
+            bmp.Freeze();
+        }
+        catch { return; }
+
+        double x = A(e, "x"), y = A(e, "y"), w = A(e, "width"), h = A(e, "height");
+        var tl = m.Map(x, y);
+        var img = new Image { Source = bmp, Stretch = System.Windows.Media.Stretch.Fill,
+            Width = Math.Max(1, w * m.ScaleX), Height = Math.Max(1, h * m.ScaleY) };
+        Canvas.SetLeft(img, tl.X);
+        Canvas.SetTop(img, tl.Y);
+        o.Add(new VShape(VKind.Image, img));
     }
 
     // ----------------------------------------------------------- helpers

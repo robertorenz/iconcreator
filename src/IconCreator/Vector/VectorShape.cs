@@ -1,13 +1,15 @@
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
 namespace IconCreator.Vector;
 
-public enum VKind { Rectangle, Ellipse, Line, Path, Text }
+public enum VKind { Rectangle, Ellipse, Line, Path, Text, Image }
 
 /// <summary>
 /// A single authored vector object. Wraps the live WPF element used for editing
@@ -120,8 +122,26 @@ public sealed class VShape
             VKind.Line => LineSvg(),
             VKind.Path => PathSvg(),
             VKind.Text => TextSvg(),
+            VKind.Image => ImageSvg(),
             _ => ""
         };
+    }
+
+    private string ImageSvg()
+    {
+        var img = (Image)Element;
+        var b = Bounds;
+        string data = "";
+        if (img.Source is BitmapSource src)
+        {
+            var enc = new PngBitmapEncoder();
+            enc.Frames.Add(BitmapFrame.Create(src));
+            using var ms = new MemoryStream();
+            enc.Save(ms);
+            data = Convert.ToBase64String(ms.ToArray());
+        }
+        return $"<image x=\"{F(b.X)}\" y=\"{F(b.Y)}\" width=\"{F(b.Width)}\" height=\"{F(b.Height)}\" " +
+               $"preserveAspectRatio=\"none\" xlink:href=\"data:image/png;base64,{data}\"/>";
     }
 
     private string RectSvg()
