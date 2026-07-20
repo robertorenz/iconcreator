@@ -20,8 +20,8 @@ A professional multi-resolution icon editor for Windows — a modern, cleaner al
 
 - **Multi-document tabs (MDI)** — open many icons at once, each in its own tab with its own undo history. `+` for a new document, `Ctrl+Tab` to cycle, `Ctrl+W` to close, middle-click a tab to close it; unsaved tabs show a ● and prompt before closing.
 - **Multi-resolution documents** — edit 16, 24, 32, 48, 64, 128 and 256 px slices side by side; tick which ones ship in the exported `.ico`.
-- **Full drawing toolset** — pencil, eraser, flood fill (with tolerance), colour picker, line, rectangle / filled rectangle, ellipse / filled ellipse, adjustable brush size.
-- **Import as a movable layer** — **drag & drop** an image onto the window (or use **Import Image**) and it arrives as a floating placement you can **drag, resize (corner handles — hold `Shift` to keep proportions), Fit, Center or Reset** before committing. **Apply** bakes it into the current size, or tick **All sizes** to composite it into every resolution at once. Hold **`Ctrl` while dropping** to open the file(s) as new tabs instead of importing.
+- **Full drawing toolset** — pencil, eraser, flood fill (with tolerance), colour picker, line, rectangle / filled rectangle, ellipse / filled ellipse, adjustable brush size — each with a crisp crafted vector icon.
+- **Import as a movable layer** — **Import Image** (or a drop onto a raster tab) brings the image in as a floating placement you can **drag, resize (corner handles — hold `Shift` to keep proportions), Fit, Center or Reset** before committing. **Apply** bakes it into the current size, or tick **All sizes** to composite it into every resolution at once.
 - **Real alpha** — every pixel is straight-alpha BGRA; optional alpha-blend mode composites brush strokes over existing pixels.
 - **Colour picker** — RGBA sliders, hex entry, preset swatches, and a transparency-aware preview.
 - **Import & drag-drop** — bring in any PNG/JPG/BMP/GIF/ICO/SVG. Drop onto a **raster** tab to place it on the canvas (resizable) and apply; drop onto a **vector** tab to add it as a resizable element; hold **Ctrl** to import into a brand-new vector tab. SVGs are rasterised from vector data, so they stay sharp.
@@ -40,8 +40,9 @@ A professional multi-resolution icon editor for Windows — a modern, cleaner al
 | `E` | Eraser | `R` / `Shift+R` | Rectangle / filled |
 | `G` | Flood fill | `O` / `Shift+O` | Ellipse / filled |
 | `I` | Colour picker | `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
-| `Ctrl+N` | New | `Ctrl+O` | Open |
-| `Ctrl+S` | Save | | |
+| `Ctrl+N` | New icon | `Ctrl+O` | Open |
+| `Ctrl+S` | Save | `Ctrl+W` | Close tab |
+| `Ctrl+Tab` | Next tab | `Ctrl+Shift+Tab` | Previous tab |
 
 ## Build & run
 
@@ -60,25 +61,25 @@ The compiled app is a single WPF desktop executable (`IconCreator.exe`).
 src/IconCreator/
 ├─ Model/         PixelBuffer, IconSlice, IconDocument
 ├─ Editing/       Drawing primitives (line, rect, ellipse, flood fill)
-├─ IO/            IcoEncoder (multi-res .ico), ImageIO, RecentFiles, AppSettings
+├─ IO/            IcoEncoder, ImageIO (+SVG raster), SvgWriter/SvgReader, RecentFiles, AppSettings
 ├─ Localization/  Loc — string tables (English + Español) with runtime switching
-├─ Vector/        VShape — vector primitives + transforms
-├─ IO/            …plus SvgWriter / SvgReader (author & parse SVG)
-├─ Views/         Modal dialogs, colour/new-icon dialogs, VectorEditor control, dark chrome
+├─ Vector/        VShape — vector primitives + transforms + SVG serialisation
+├─ Views/         Modal/colour/new-icon dialogs, VectorEditor control, ToolIcons, dark chrome
 ├─ Theme/         Professional dark palette + control styles
-└─ MainWindow     Editor shell, tabs, tools, undo/redo, file commands
+└─ MainWindow     Editor shell, raster/vector tabs, tools, undo/redo, file commands
 ```
 
 ## Verification
 
-The encoder is covered by a built-in round-trip self-test:
+A built-in round-trip self-test covers the core pipelines:
 
 ```bash
 IconCreator.exe --selftest   # writes %TEMP%\iconcreator_selftest.txt
 ```
 
-It builds a synthetic 16/32/48/256 icon, saves it, reloads it through the WPF
-decoder and confirms all four frames come back at the right sizes.
+It builds a synthetic 16/32/48/256 icon, saves and reloads it (all four frames
+verified), rasterises an SVG, authors shapes → `.svg` → parses them back, and
+round-trips an embedded `<image>` element.
 
 ---
 
