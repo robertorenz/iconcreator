@@ -86,6 +86,10 @@ public partial class App : Application
             rt.CopyPixels(vb, 64 * 4, 0);
             int vOpaque = vb.Count(px => ((px >> 24) & 0xFF) > 10);
             report.AppendLine($"authoredSvg has <rect>={authored.Contains("<rect")} <line>={authored.Contains("<line")} rasterOpaque={vOpaque}");
+
+            // SVG read-back: parse the authored file into editable shapes.
+            var reparsed = SvgReader.Read(outSvg, 256);
+            report.AppendLine($"svgReadBack shapes={reparsed.Count} kinds={string.Join(",", reparsed.Select(s => s.Kind))}");
         }
         catch (Exception ex)
         {

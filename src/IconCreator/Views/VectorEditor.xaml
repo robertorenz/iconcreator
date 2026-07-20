@@ -1,59 +1,32 @@
-<Window x:Class="IconCreator.Views.VectorEditorWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Vector Editor"
-        Height="720" Width="1000"
-        MinHeight="520" MinWidth="820"
-        WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Brush.Window}"
-        UseLayoutRounding="True"
-        Focusable="True">
-
+<UserControl x:Class="IconCreator.Views.VectorEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource Brush.Window}"
+             Focusable="True">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Command bar -->
-        <Border Grid.Row="0" Background="{StaticResource Brush.Panel}"
-                BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,0,1">
-            <DockPanel LastChildFill="True">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
-                            VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Button x:Name="BtnExportPng" Style="{StaticResource Button.Flat}"
-                            Content="Export PNG" Click="OnExportPng"/>
-                    <Button x:Name="BtnSaveSvg" Content="Save SVG" Margin="8,0,0,0"
-                            Style="{StaticResource Button.Accent}" Click="OnSaveSvg"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="12,8">
-                    <TextBlock Text="✒" FontSize="15" Foreground="{StaticResource Brush.Accent}"
-                               VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock x:Name="TitleLabel" Text="Vector Editor" FontWeight="SemiBold"
-                               FontSize="14" VerticalAlignment="Center"/>
-                </StackPanel>
-            </DockPanel>
-        </Border>
-
-        <!-- Work area -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="264"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Tools -->
+            <!-- Vector tool palette -->
             <Border Grid.Column="0" Background="{StaticResource Brush.Panel}"
                     BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,1,0">
                 <StackPanel x:Name="ToolStack" Margin="7,10" Width="46"/>
             </Border>
 
             <!-- Canvas -->
-            <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Auto" Padding="28"
-                          Background="{StaticResource Brush.Window}">
+            <ScrollViewer Grid.Column="1" x:Name="BoardScroll"
+                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                          Padding="28" Background="{StaticResource Brush.Window}"
+                          PreviewMouseWheel="OnBoardWheel">
                 <Border x:Name="BoardFrame" HorizontalAlignment="Center" VerticalAlignment="Center"
                         BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1">
                     <Border.LayoutTransform>
@@ -130,14 +103,17 @@
             </Border>
         </Grid>
 
-        <!-- Status -->
-        <Border Grid.Row="2" Background="{StaticResource Brush.Panel}"
+        <!-- Vector status line -->
+        <Border Grid.Row="1" Background="{StaticResource Brush.Panel}"
                 BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,1,0,0">
             <Grid Margin="12,5">
                 <TextBlock x:Name="StatusTool" Text="Select" Foreground="{StaticResource Brush.TextDim}"/>
-                <TextBlock x:Name="StatusHint" HorizontalAlignment="Right"
-                           Foreground="{StaticResource Brush.TextFaint}" Text=""/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock x:Name="StatusHint" Foreground="{StaticResource Brush.TextFaint}" Text=""/>
+                    <TextBlock Text="   " />
+                    <TextBlock x:Name="ZoomLabel" Foreground="{StaticResource Brush.TextDim}" Text="200%"/>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>
-</Window>
+</UserControl>

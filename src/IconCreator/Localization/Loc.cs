@@ -57,7 +57,8 @@ public static class Loc
         ["exportIco"] = "Export .ICO",
         ["language"] = "Language",
         ["vector"] = "Vector",
-        ["vectorTip"] = "Vector editor — author SVG",
+        ["newSvg"] = "New SVG",
+        ["vectorTip"] = "New vector drawing — author SVG",
 
         // Vector editor
         ["vec.title"] = "Vector Editor — IconCreator Studio",
@@ -187,7 +188,8 @@ public static class Loc
         ["exportIco"] = "Exportar .ICO",
         ["language"] = "Idioma",
         ["vector"] = "Vector",
-        ["vectorTip"] = "Editor vectorial — crear SVG",
+        ["newSvg"] = "Nuevo SVG",
+        ["vectorTip"] = "Nuevo dibujo vectorial — crear SVG",
 
         // Vector editor
         ["vec.title"] = "Editor vectorial — IconCreator Studio",

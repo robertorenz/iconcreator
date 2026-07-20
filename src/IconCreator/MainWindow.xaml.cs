@@ -17,13 +17,17 @@ namespace IconCreator;
 
 public partial class MainWindow : Window
 {
-    /// <summary>One open document (an editor tab) with its own undo history.</summary>
+    private enum SessionKind { Raster, Vector }
+
+    /// <summary>One open document (an editor tab). Either a raster icon or a vector drawing.</summary>
     private sealed class DocSession
     {
-        public required IconDocument Doc { get; init; }
+        public SessionKind Kind { get; init; } = SessionKind.Raster;
+        public IconDocument? Doc { get; init; }
         public IconSlice Active { get; set; } = null!;
         public readonly Stack<UndoCommand> Undo = new();
         public readonly Stack<UndoCommand> Redo = new();
+        public Views.VectorEditor? Vector { get; init; }
     }
 
     private readonly List<DocSession> _sessions = new();
@@ -161,8 +165,8 @@ public partial class MainWindow : Window
         BtnRedo.Content = Loc.T("redo");
         BtnClear.Content = Loc.T("clear");
         BtnExportIco.Content = Loc.T("exportIco");
-        BtnVector.Content = "✒ " + Loc.T("vector");
-        BtnVector.ToolTip = Loc.T("vectorTip");
+        BtnNewVector.Content = "✒ " + Loc.T("newSvg");
+        BtnNewVector.ToolTip = Loc.T("vectorTip");
         BtnLang.ToolTip = Loc.T("language");
 
         // Right panel
@@ -221,18 +225,54 @@ public partial class MainWindow : Window
 
     private void ActivateSession(DocSession session)
     {
+        if (_importing) EndImport();
         _cur = session;
-        BuildSizeList();
-        SetActive(session.Active);
+
+        if (session.Kind == SessionKind.Vector)
+        {
+            RasterWork.Visibility = Visibility.Collapsed;
+            VectorHost.Visibility = Visibility.Visible;
+            VectorHost.Content = session.Vector;
+            session.Vector!.ApplyLanguage();
+            session.Vector.Focus();
+        }
+        else
+        {
+            VectorHost.Visibility = Visibility.Collapsed;
+            VectorHost.Content = null;
+            RasterWork.Visibility = Visibility.Visible;
+            BuildSizeList();
+            SetActive(session.Active);
+        }
+
+        UpdateChromeForKind(session.Kind);
         UpdateTitle();
         RefreshTabStrip();
     }
 
+    private void UpdateChromeForKind(SessionKind kind)
+    {
+        bool raster = kind == SessionKind.Raster;
+        // Raster-only commands
+        BtnImport.IsEnabled = raster;
+        BtnExportIco.IsEnabled = raster;
+        BtnUndo.IsEnabled = raster;
+        BtnRedo.IsEnabled = raster;
+        BtnClear.IsEnabled = raster;
+        // Status bar is raster-oriented; vector has its own line.
+        StatusTool.Visibility = raster ? Visibility.Visible : Visibility.Collapsed;
+        StatusSize.Visibility = raster ? Visibility.Visible : Visibility.Collapsed;
+        StatusCursor.Visibility = raster ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private bool SessionDirty(DocSession s) =>
+        s.Kind == SessionKind.Vector ? s.Vector!.IsDirty : s.Doc!.IsDirty;
+
     private void CloseSession(DocSession session)
     {
-        if (session.Doc.IsDirty)
+        if (SessionDirty(session))
         {
-            ActivateSession(session);   // show what is about to close
+            if (_cur != session) ActivateSession(session);   // show what is about to close
             if (!ConfirmDiscard()) return;
         }
 
@@ -250,6 +290,24 @@ public partial class MainWindow : Window
             ActivateSession(_sessions[Math.Min(idx, _sessions.Count - 1)]);
         else
             RefreshTabStrip();
+    }
+
+    // ============================ Vector documents ============================
+
+    private void OnNewVector(object sender, RoutedEventArgs e) => NewVectorDocument();
+
+    private DocSession NewVectorDocument()
+    {
+        var editor = new Views.VectorEditor();
+        var session = new DocSession { Kind = SessionKind.Vector, Vector = editor };
+        editor.Changed += () =>
+        {
+            RefreshTabStrip();
+            if (_cur == session) UpdateTitle();
+        };
+        _sessions.Add(session);
+        ActivateSession(session);
+        return session;
     }
 
     private void RefreshTabStrip()
@@ -277,11 +335,22 @@ public partial class MainWindow : Window
     private Border BuildTab(DocSession s)
     {
         bool active = s == _cur;
-        string name = s.Doc.FilePath is null ? Loc.T("untitled") : Path.GetFileName(s.Doc.FilePath);
+        bool vector = s.Kind == SessionKind.Vector;
+        string name = vector
+            ? s.Vector!.DisplayName
+            : (s.Doc!.FilePath is null ? Loc.T("untitled") : Path.GetFileName(s.Doc.FilePath));
 
         var stack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
 
-        if (s.Doc.IsDirty)
+        // Kind glyph
+        stack.Children.Add(new TextBlock
+        {
+            Text = vector ? "✒" : "▦", FontSize = 11,
+            Foreground = (Brush)Application.Current.Resources[vector ? "Brush.Teal" : "Brush.TextDim"],
+            Margin = new Thickness(0, 0, 7, 0), VerticalAlignment = VerticalAlignment.Center
+        });
+
+        if (SessionDirty(s))
             stack.Children.Add(new TextBlock
             {
                 Text = "●", FontSize = 10,
@@ -554,7 +623,7 @@ public partial class MainWindow : Window
 
     private void OnUndo(object sender, RoutedEventArgs e)
     {
-        if (_undo.Count == 0) return;
+        if (_cur.Kind != SessionKind.Raster || _undo.Count == 0) return;
         var cmd = _undo.Pop();
         cmd.Slice.Buffer.Restore(cmd.Before);
         _redo.Push(cmd);
@@ -565,7 +634,7 @@ public partial class MainWindow : Window
 
     private void OnRedo(object sender, RoutedEventArgs e)
     {
-        if (_redo.Count == 0) return;
+        if (_cur.Kind != SessionKind.Raster || _redo.Count == 0) return;
         var cmd = _redo.Pop();
         cmd.Slice.Buffer.Restore(cmd.After);
         _undo.Push(cmd);
@@ -576,6 +645,7 @@ public partial class MainWindow : Window
 
     private void OnClear(object sender, RoutedEventArgs e)
     {
+        if (_cur.Kind != SessionKind.Raster) return;
         var before = _active.Buffer.Snapshot();
         _active.Buffer.Clear();
         _active.Buffer.Flush();
@@ -755,7 +825,35 @@ public partial class MainWindow : Window
     {
         var dlg = new OpenFileDialog { Filter = "Icon (*.ico)|*.ico|" + ImageIO.OpenFilter };
         if (dlg.ShowDialog(this) != true) return;
-        OpenPath(dlg.FileName);
+        OpenAnyFile(dlg.FileName);
+    }
+
+    /// <summary>Route by extension: .svg opens a vector tab, everything else a raster tab.</summary>
+    private void OpenAnyFile(string path)
+    {
+        if (path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)) OpenVectorFile(path);
+        else OpenPath(path);
+    }
+
+    private void OpenVectorFile(string path)
+    {
+        var session = NewVectorDocument();
+        try
+        {
+            session.Vector!.LoadSvg(path);
+            RecentFiles.Add(path);
+            UpdateTitle();
+            RefreshTabStrip();
+            StatusHint.Text = Loc.T("msg.opened", Path.GetFileName(path));
+        }
+        catch (Exception ex)
+        {
+            RecentFiles.Remove(path);
+            _sessions.Remove(session);
+            if (_sessions.Count == 0) NewDocument(IconDocument.StandardSizes, 32);
+            else ActivateSession(_sessions[^1]);
+            ModalDialog.Error(this, Loc.T("err.openTitle"), ex.Message);
+        }
     }
 
     private void OpenPath(string path)
@@ -901,19 +999,37 @@ public partial class MainWindow : Window
         btn.Click += (_, _) =>
         {
             _recentPopup!.IsOpen = false;
-            OpenPath(captured);   // opens in a new tab
+            OpenAnyFile(captured);   // opens in a new tab (raster or vector)
         };
         return btn;
     }
 
     private void OnSave(object sender, RoutedEventArgs e)
     {
+        if (_cur.Kind == SessionKind.Vector)
+        {
+            if (_cur.Vector!.FilePath is { } fp) SaveVectorTo(fp);
+            else OnSaveAs(sender, e);
+            return;
+        }
         if (_doc.FilePath == null) OnSaveAs(sender, e);
         else SaveTo(_doc.FilePath);
     }
 
     private void OnSaveAs(object sender, RoutedEventArgs e)
     {
+        if (_cur.Kind == SessionKind.Vector)
+        {
+            var vdlg = new SaveFileDialog
+            {
+                Filter = "SVG image (*.svg)|*.svg",
+                FileName = _cur.Vector!.FilePath is { } f ? Path.GetFileName(f) : "drawing.svg"
+            };
+            if (vdlg.ShowDialog(this) != true) return;
+            SaveVectorTo(vdlg.FileName);
+            return;
+        }
+
         var dlg = new SaveFileDialog
         {
             Filter = "Icon (*.ico)|*.ico",
@@ -921,6 +1037,22 @@ public partial class MainWindow : Window
         };
         if (dlg.ShowDialog(this) != true) return;
         SaveTo(dlg.FileName);
+    }
+
+    private void SaveVectorTo(string path)
+    {
+        try
+        {
+            _cur.Vector!.SaveSvg(path);
+            RecentFiles.Add(path);
+            UpdateTitle();
+            RefreshTabStrip();
+            StatusHint.Text = Loc.T("vec.savedSvg", Path.GetFileName(path));
+        }
+        catch (Exception ex)
+        {
+            ModalDialog.Error(this, Loc.T("err.saveSvgTitle"), ex.Message);
+        }
     }
 
     private void SaveTo(string path)
@@ -940,15 +1072,14 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnExportIco(object sender, RoutedEventArgs e) => OnSaveAs(sender, e);
-
-    private void OnVectorEditor(object sender, RoutedEventArgs e)
+    private void OnExportIco(object sender, RoutedEventArgs e)
     {
-        new VectorEditorWindow(this).Show();
+        if (_cur.Kind == SessionKind.Raster) OnSaveAs(sender, e);
     }
 
     private void OnImport(object sender, RoutedEventArgs e)
     {
+        if (_cur.Kind != SessionKind.Raster) return;
         var dlg = new OpenFileDialog { Filter = ImageIO.OpenFilter };
         if (dlg.ShowDialog(this) != true) return;
         ImportFromFile(dlg.FileName);
@@ -990,11 +1121,21 @@ public partial class MainWindow : Window
         e.Handled = true;
         Activate();
 
-        // Ctrl = open each file as its own document; otherwise place the first as a layer.
-        if ((e.KeyStates & DragDropKeyStates.ControlKey) != 0)
-            foreach (var f in files) OpenPath(f);
-        else
-            ImportFromFile(files[0]);
+        bool open = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+
+        // SVGs always open as editable vector tabs.
+        var svgs = files.Where(f => f.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)).ToList();
+        var others = files.Where(f => !f.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)).ToList();
+
+        foreach (var f in svgs) OpenVectorFile(f);
+
+        if (others.Count > 0)
+        {
+            if (open || _cur.Kind == SessionKind.Vector)
+                foreach (var f in others) OpenPath(f);   // open as raster tabs
+            else
+                ImportFromFile(others[0]);                // place onto current raster canvas
+        }
     }
 
     // ============================ Import placement layer ============================
@@ -1209,12 +1350,13 @@ public partial class MainWindow : Window
         var dlg = new SaveFileDialog
         {
             Filter = "PNG image (*.png)|*.png",
-            FileName = $"icon_{_active.Size}.png"
+            FileName = _cur.Kind == SessionKind.Vector ? "drawing.png" : $"icon_{_active.Size}.png"
         };
         if (dlg.ShowDialog(this) != true) return;
         try
         {
-            ImageIO.ExportPng(dlg.FileName, _active.Buffer);
+            if (_cur.Kind == SessionKind.Vector) _cur.Vector!.ExportPng(dlg.FileName);
+            else ImageIO.ExportPng(dlg.FileName, _active.Buffer);
             StatusHint.Text = Loc.T("msg.exported", Path.GetFileName(dlg.FileName));
         }
         catch (Exception ex)
@@ -1232,18 +1374,27 @@ public partial class MainWindow : Window
         RefreshTabStrip();
     }
 
-    private void UpdateTitle() => Title = _doc.Title;
+    private void UpdateTitle()
+    {
+        if (_cur == null) return;
+        if (_cur.Kind == SessionKind.Vector)
+        {
+            var v = _cur.Vector!;
+            Title = (v.IsDirty ? "● " : "") + v.DisplayName + "  —  IconCreator Studio";
+        }
+        else Title = _doc.Title;
+    }
 
     private bool ConfirmDiscard()
     {
-        if (!_doc.IsDirty) return true;
+        if (!SessionDirty(_cur)) return true;
         return ModalDialog.Confirm(this, Loc.T("discardTitle"), Loc.T("discardMsg"),
             Loc.T("discard"), Loc.T("cancel"));
     }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
-        int dirty = _sessions.Count(s => s.Doc.IsDirty);
+        int dirty = _sessions.Count(SessionDirty);
         if (dirty > 0)
         {
             string msg = dirty == 1 ? Loc.T("closeOne") : Loc.T("closeMany", dirty);
