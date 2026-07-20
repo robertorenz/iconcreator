@@ -65,6 +65,27 @@ public partial class App : Application
                 int opaque = buf.Count(px => ((px >> 24) & 0xFF) > 10);
                 report.AppendLine($"svg={raster.PixelWidth}x{raster.PixelHeight} opaquePixels={opaque}");
             }
+
+            // Vector authoring round-trip: build shapes -> SVG -> rasterise.
+            var shapes = new List<Vector.VShape>();
+            var rect = new System.Windows.Shapes.Rectangle
+            { Width = 180, Height = 180, RadiusX = 24, RadiusY = 24, Fill = System.Windows.Media.Brushes.SteelBlue };
+            System.Windows.Controls.Canvas.SetLeft(rect, 38);
+            System.Windows.Controls.Canvas.SetTop(rect, 38);
+            shapes.Add(new Vector.VShape(Vector.VKind.Rectangle, rect));
+
+            var line = new System.Windows.Shapes.Line
+            { X1 = 60, Y1 = 60, X2 = 196, Y2 = 196, Stroke = System.Windows.Media.Brushes.White, StrokeThickness = 8 };
+            shapes.Add(new Vector.VShape(Vector.VKind.Line, line));
+
+            string authored = SvgWriter.Build(256, shapes);
+            string outSvg = Path.Combine(Path.GetTempPath(), "iconcreator_authored.svg");
+            File.WriteAllText(outSvg, authored);
+            var rt = ImageIO.RasterizeSvg(outSvg, 64);
+            var vb = new int[64 * 64];
+            rt.CopyPixels(vb, 64 * 4, 0);
+            int vOpaque = vb.Count(px => ((px >> 24) & 0xFF) > 10);
+            report.AppendLine($"authoredSvg has <rect>={authored.Contains("<rect")} <line>={authored.Contains("<line")} rasterOpaque={vOpaque}");
         }
         catch (Exception ex)
         {

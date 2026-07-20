@@ -161,6 +161,8 @@ public partial class MainWindow : Window
         BtnRedo.Content = Loc.T("redo");
         BtnClear.Content = Loc.T("clear");
         BtnExportIco.Content = Loc.T("exportIco");
+        BtnVector.Content = "✒ " + Loc.T("vector");
+        BtnVector.ToolTip = Loc.T("vectorTip");
         BtnLang.ToolTip = Loc.T("language");
 
         // Right panel
@@ -939,6 +941,11 @@ public partial class MainWindow : Window
     }
 
     private void OnExportIco(object sender, RoutedEventArgs e) => OnSaveAs(sender, e);
+
+    private void OnVectorEditor(object sender, RoutedEventArgs e)
+    {
+        new VectorEditorWindow(this).Show();
+    }
 
     private void OnImport(object sender, RoutedEventArgs e)
     {

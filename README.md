@@ -29,6 +29,7 @@ A professional multi-resolution icon editor for Windows — a modern, cleaner al
 - **Recent files** — a **Recent ▾** menu quick-opens the last 20 icons you saved or opened (persisted between sessions).
 - **Editor niceties** — zoom 1×–32× via slider, **Ctrl + mouse wheel** (anchored at the cursor) or fit-to-window; pixel grid overlay, transparency checkerboard, unlimited undo/redo, live status bar.
 - **Multilingual** — switch the entire UI between **English** and **Español** on the fly via the 🌐 menu; the choice is remembered between sessions. New languages are a small dictionary away.
+- **Vector editor (author SVG)** — a built-in **✒ Vector** studio for drawing true vector shapes: rectangle, ellipse, line, multi-point path and text, each with fill / stroke / stroke-width. Select, move, resize (corner handles) and delete, then **save a real `.svg`** or export a PNG. Round-trips with the SVG import above.
 - **Modal dialogs** everywhere (no jarring system alerts) and a native dark title bar.
 
 ## Keyboard shortcuts
@@ -61,7 +62,8 @@ src/IconCreator/
 ├─ Editing/       Drawing primitives (line, rect, ellipse, flood fill)
 ├─ IO/            IcoEncoder (multi-res .ico), ImageIO, RecentFiles, AppSettings
 ├─ Localization/  Loc — string tables (English + Español) with runtime switching
-├─ Views/         Modal dialogs, colour picker, new-icon dialog, dark chrome
+├─ Vector/        VShape — vector primitives + SVG serialisation
+├─ Views/         Modal dialogs, colour/new-icon dialogs, Vector editor, dark chrome
 ├─ Theme/         Professional dark palette + control styles
 └─ MainWindow     Editor shell, tabs, tools, undo/redo, file commands
 ```

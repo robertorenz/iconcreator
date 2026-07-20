@@ -1,0 +1,143 @@
+<Window x:Class="IconCreator.Views.VectorEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Vector Editor"
+        Height="720" Width="1000"
+        MinHeight="520" MinWidth="820"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Brush.Window}"
+        UseLayoutRounding="True"
+        Focusable="True">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Command bar -->
+        <Border Grid.Row="0" Background="{StaticResource Brush.Panel}"
+                BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,0,1">
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="0,0,12,0">
+                    <Button x:Name="BtnExportPng" Style="{StaticResource Button.Flat}"
+                            Content="Export PNG" Click="OnExportPng"/>
+                    <Button x:Name="BtnSaveSvg" Content="Save SVG" Margin="8,0,0,0"
+                            Style="{StaticResource Button.Accent}" Click="OnSaveSvg"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="12,8">
+                    <TextBlock Text="✒" FontSize="15" Foreground="{StaticResource Brush.Accent}"
+                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="TitleLabel" Text="Vector Editor" FontWeight="SemiBold"
+                               FontSize="14" VerticalAlignment="Center"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Work area -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="264"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Tools -->
+            <Border Grid.Column="0" Background="{StaticResource Brush.Panel}"
+                    BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,1,0">
+                <StackPanel x:Name="ToolStack" Margin="7,10" Width="46"/>
+            </Border>
+
+            <!-- Canvas -->
+            <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto" Padding="28"
+                          Background="{StaticResource Brush.Window}">
+                <Border x:Name="BoardFrame" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1">
+                    <Border.LayoutTransform>
+                        <ScaleTransform x:Name="BoardScale" ScaleX="2" ScaleY="2"/>
+                    </Border.LayoutTransform>
+                    <Grid Width="256" Height="256">
+                        <Canvas x:Name="ArtBoard" Background="Transparent"
+                                MouseLeftButtonDown="OnBoardDown"
+                                MouseMove="OnBoardMove"
+                                MouseLeftButtonUp="OnBoardUp"/>
+                        <Canvas x:Name="SelectionLayer" IsHitTestVisible="True"/>
+                    </Grid>
+                </Border>
+            </ScrollViewer>
+
+            <!-- Properties -->
+            <Border Grid.Column="2" Background="{StaticResource Brush.Panel}"
+                    BorderBrush="{StaticResource Brush.Border}" BorderThickness="1,0,0,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,14">
+                    <StackPanel>
+                        <TextBlock x:Name="LblFill" Text="FILL" Style="{StaticResource Label.Section}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <Border x:Name="FillSwatch" Width="40" Height="30" CornerRadius="5"
+                                    BorderBrush="{StaticResource Brush.Border}" BorderThickness="1"
+                                    Cursor="Hand" MouseLeftButtonUp="OnPickFill"/>
+                            <CheckBox x:Name="FillNone" Content="None" VerticalAlignment="Center"
+                                      Margin="12,0,0,0" Checked="OnFillNone" Unchecked="OnFillNone"/>
+                        </StackPanel>
+
+                        <TextBlock x:Name="LblStroke" Text="STROKE" Style="{StaticResource Label.Section}" Margin="2,10,0,6"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <Border x:Name="StrokeSwatch" Width="40" Height="30" CornerRadius="5"
+                                    BorderBrush="{StaticResource Brush.Border}" BorderThickness="1"
+                                    Cursor="Hand" MouseLeftButtonUp="OnPickStroke"/>
+                            <CheckBox x:Name="StrokeNone" Content="None" VerticalAlignment="Center"
+                                      Margin="12,0,0,0" Checked="OnStrokeNone" Unchecked="OnStrokeNone"/>
+                        </StackPanel>
+
+                        <TextBlock x:Name="LblStrokeWidth" Text="STROKE WIDTH" Style="{StaticResource Label.Section}" Margin="2,10,0,6"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="StrokeWidthSlider" Minimum="0" Maximum="24" Value="2"
+                                    IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnStrokeWidth"/>
+                            <TextBlock x:Name="StrokeWidthValue" Grid.Column="1" Text="2" Width="30"
+                                       TextAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <TextBlock x:Name="LblFontSize" Text="FONT SIZE" Style="{StaticResource Label.Section}" Margin="2,12,0,6"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="FontSizeSlider" Minimum="6" Maximum="120" Value="28"
+                                    IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="OnFontSize"/>
+                            <TextBlock x:Name="FontSizeValue" Grid.Column="1" Text="28" Width="30"
+                                       TextAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Rectangle Height="1" Fill="{StaticResource Brush.Border}" Margin="0,14,0,12"/>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="BtnDelete" Content="Delete" Padding="12,5" Click="OnDeleteSelected"/>
+                            <Button x:Name="BtnClearAll" Content="Clear all" Padding="12,5" Margin="8,0,0,0" Click="OnClearAll"/>
+                        </StackPanel>
+
+                        <TextBlock x:Name="ShapeCount" Margin="2,14,0,0" FontSize="12"
+                                   Foreground="{StaticResource Brush.TextFaint}" Text="0 shapes"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- Status -->
+        <Border Grid.Row="2" Background="{StaticResource Brush.Panel}"
+                BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,1,0,0">
+            <Grid Margin="12,5">
+                <TextBlock x:Name="StatusTool" Text="Select" Foreground="{StaticResource Brush.TextDim}"/>
+                <TextBlock x:Name="StatusHint" HorizontalAlignment="Right"
+                           Foreground="{StaticResource Brush.TextFaint}" Text=""/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

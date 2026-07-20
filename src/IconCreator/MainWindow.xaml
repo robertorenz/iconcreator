@@ -21,6 +21,8 @@
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                             VerticalAlignment="Center" Margin="8,0,12,0">
+                    <Button x:Name="BtnVector" Style="{StaticResource Button.Flat}" Content="✒ Vector"
+                            Click="OnVectorEditor"/>
                     <Button x:Name="BtnLang" Style="{StaticResource Button.Flat}" Content="🌐 ▾"
                             Click="OnLanguageMenu" ToolTip="Language"/>
                     <Button x:Name="BtnExportIco" Content="Export .ICO" Margin="10,0,0,0"
